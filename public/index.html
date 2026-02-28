@@ -1,0 +1,1834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#00b4ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="FCC" />
+  <link rel="manifest" href="/manifest.json" />
+  <title>Fantasy Command Center</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #060a10; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+    #root { min-height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
+  <script type="text/babel">
+const { useState, useEffect, useCallback, useMemo } = React;
+
+// ============================================================
+// FANTASY BASEBALL COMMAND CENTER - IAMFBL LEAGUE
+// Dark carbon fiber aesthetic with electric blue accents
+// ============================================================
+
+const TEAM_NAME = "Josh's Squad";
+const LEAGUE_SIZE = 10;
+
+// Scoring system
+const BATTING_SCORING = {
+  "1B": 1, "2B": 2, "3B": 3, BB: 1, CS: -1, CYC: 10, GSHR: 3,
+  HP: 1, HR: 4, KO: -1, R: 1, RBI: 1, SB: 1.75, SF: 1, SH: 0.5,
+};
+const PITCHING_SCORING = {
+  BBI: -0.5, BS: -2, CG: 5, CGL: 3, ER: -1, INN: 0.75, K: 1,
+  L: -5, NH: 10, PG: 20, PKO: 2, QS: 4, S: 7, SO: 5, W: 10,
+};
+
+// Initial keepers
+const INITIAL_KEEPERS = [
+  { name: "Garrett Crochet", pos: "SP", team: "BOS", type: "major", year: 1, maxYears: 2, proj: 412.2, ecr: "SP2", age: 26, notes: "Ace. SP2 overall." },
+  { name: "Cal Raleigh", pos: "C", team: "SEA", type: "major", year: 1, maxYears: 2, proj: 444.5, ecr: "C1", age: 29, notes: "Dominant C1. Positional scarcity." },
+  { name: "Junior Caminero", pos: "3B", team: "TB", type: "minor", year: 1, maxYears: 3, proj: 445.1, ecr: "3B2", age: 22, notes: "45 HR breakout. Elite power." },
+  { name: "Nick McLean", pos: "SP", team: "NYM", type: "minor", year: 1, maxYears: 3, proj: 347.5, ecr: "SP29", age: 23, notes: "Young arm, high upside." },
+  { name: "Konnor Griffin", pos: "SS", team: "PIT", type: "minor", year: 1, maxYears: 3, proj: 150.1, ecr: "SS20", age: 19, notes: "Toolsy prospect. Long-term play." },
+];
+
+const KEEPER_WATCHLIST = [
+  { name: "Corbin Burns", pos: "SP", team: "CIN", type: "minor", proj: 240.0, ecr: "SP27", age: 30, notes: "Could swap for Griffin. 3yr eligible." },
+  { name: "Jackson Chourio", pos: "OF", team: "MIL", type: "minor", proj: 409.9, ecr: "OF8", age: 21, notes: "1 year left. Elite bat but short window." },
+];
+
+// Position slots for roster
+const ROSTER_SLOTS = ["C", "1B", "2B", "3B", "SS", "OF", "OF", "OF", "OF", "DH", "BN", "BN", "BN", "BN", "BN", "SP", "SP", "SP", "SP", "SP", "RP", "RP", "RP", "RES", "RES", "RES", "RES", "IL", "IL", "MiLB"];
+
+// ============================================================
+// STORAGE HELPERS — localStorage for PWA
+// ============================================================
+const STORAGE_KEYS = {
+  roster: "iamfbl-roster",
+  draftPool: "iamfbl-draft-pool",
+  draftPick: "iamfbl-draft-pick",
+  draftLog: "iamfbl-draft-log",
+  notes: "iamfbl-notes",
+  news: "iamfbl-news",
+  watchlist: "iamfbl-watchlist",
+  keepers: "iamfbl-keepers",
+  keeperWatchlist: "iamfbl-keeper-watchlist",
+};
+
+function loadData(key, fallback) {
+  try {
+    const val = localStorage.getItem(key);
+    return val ? JSON.parse(val) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveData(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    console.error("Storage error:", e);
+  }
+}
+
+// ============================================================
+// ICONS (inline SVG components)
+// ============================================================
+const Icons = {
+  Trophy: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/><path d="M18 2H6v7a6 6 0 0012 0V2z"/></svg>,
+  Users: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
+  TrendUp: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+  TrendDown: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>,
+  Search: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  Plus: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  Minus: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  Star: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="#00b4ff" stroke="#00b4ff" strokeWidth="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+  Swap: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>,
+  Clock: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  Lock: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>,
+  Edit: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+  Trash: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>,
+  ChevDown: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>,
+  Alert: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff6b35" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+  Check: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00ff88" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>,
+};
+
+// ============================================================
+// MAIN APP
+// ============================================================
+window.__FantasyApp = function FantasyCommandCenter() {
+  const [activeTab, setActiveTab] = useState("myteam");
+  const [keepers, setKeepers] = useState(INITIAL_KEEPERS);
+  const [keeperWatchlist, setKeeperWatchlist] = useState(KEEPER_WATCHLIST);
+  const [roster, setRoster] = useState([]);
+  const [draftPool, setDraftPool] = useState([]);
+  const [draftPick, setDraftPick] = useState(null);
+  const [draftLog, setDraftLog] = useState([]);
+  const [watchlist, setWatchlist] = useState([]);
+  const [notes, setNotes] = useState("");
+  const [news, setNews] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [modalOpen, setModalOpen] = useState(null);
+  const [modalData, setModalData] = useState({});
+  const [compareA, setCompareA] = useState(null);
+  const [compareB, setCompareB] = useState(null);
+  const [tradeMyPlayers, setTradeMyPlayers] = useState([]);
+  const [tradeTheirPlayers, setTradeTheirPlayers] = useState([]);
+
+  // Load from storage
+  useEffect(() => {
+    setRoster(loadData(STORAGE_KEYS.roster, []));
+    setDraftPool(loadData(STORAGE_KEYS.draftPool, []));
+    setDraftPick(loadData(STORAGE_KEYS.draftPick, null));
+    setDraftLog(loadData(STORAGE_KEYS.draftLog, []));
+    setNotes(loadData(STORAGE_KEYS.notes, ""));
+    setNews(loadData(STORAGE_KEYS.news, []));
+    setWatchlist(loadData(STORAGE_KEYS.watchlist, []));
+    const savedKeepers = loadData(STORAGE_KEYS.keepers, null);
+    if (savedKeepers && savedKeepers.length) setKeepers(savedKeepers);
+    const savedKW = loadData(STORAGE_KEYS.keeperWatchlist, null);
+    if (savedKW && savedKW.length) setKeeperWatchlist(savedKW);
+    setLoaded(true);
+  }, []);
+
+  // Auto-save
+  useEffect(() => { if (loaded) saveData(STORAGE_KEYS.roster, roster); }, [roster, loaded]);
+  useEffect(() => { if (loaded) saveData(STORAGE_KEYS.draftPool, draftPool); }, [draftPool, loaded]);
+  useEffect(() => { if (loaded) saveData(STORAGE_KEYS.draftPick, draftPick); }, [draftPick, loaded]);
+  useEffect(() => { if (loaded) saveData(STORAGE_KEYS.draftLog, draftLog); }, [draftLog, loaded]);
+  useEffect(() => { if (loaded) saveData(STORAGE_KEYS.notes, notes); }, [notes, loaded]);
+  useEffect(() => { if (loaded) saveData(STORAGE_KEYS.news, news); }, [news, loaded]);
+  useEffect(() => { if (loaded) saveData(STORAGE_KEYS.watchlist, watchlist); }, [watchlist, loaded]);
+  useEffect(() => { if (loaded) saveData(STORAGE_KEYS.keepers, keepers); }, [keepers, loaded]);
+  useEffect(() => { if (loaded) saveData(STORAGE_KEYS.keeperWatchlist, keeperWatchlist); }, [keeperWatchlist, loaded]);
+
+  const tabs = [
+    { id: "myteam", label: "My Team", icon: <Icons.Star /> },
+    { id: "keepers", label: "Keepers", icon: <Icons.Lock /> },
+    { id: "draft", label: "Draft HQ", icon: <Icons.Trophy /> },
+    { id: "roster", label: "Roster", icon: <Icons.Users /> },
+    { id: "freeagent", label: "FA Analyzer", icon: <Icons.TrendUp /> },
+    { id: "trade", label: "Trade Eval", icon: <Icons.Swap /> },
+    { id: "intel", label: "Intel Feed", icon: <Icons.Search /> },
+  ];
+
+  // ============================================================
+  // MY TEAM TAB — Lineup optimizer, start/sit, weekly view
+  // ============================================================
+  function MyTeamTab() {
+    const [weekNotes, setWeekNotes] = useState("");
+
+    const allPlayers = useMemo(() => {
+      const keeperPlayers = keepers.map(k => ({
+        ...k, isKeeper: true, keeperType: k.type, keeperYear: k.year, keeperMaxYears: k.maxYears,
+      }));
+      const nonKeeperRoster = roster.filter(r => !keepers.some(k => k.name === r.name));
+      return [...keeperPlayers, ...nonKeeperRoster];
+    }, [roster, keepers]);
+
+    const batters = allPlayers.filter(p => !["SP", "RP"].includes(p.pos));
+    const pitchers = allPlayers.filter(p => ["SP", "RP"].includes(p.pos));
+
+    const posOrder = ["C", "1B", "2B", "3B", "SS", "OF", "DH"];
+    const sortedBatters = [...batters].sort((a, b) => {
+      const ai = posOrder.indexOf(a.pos); const bi = posOrder.indexOf(b.pos);
+      if (ai !== bi) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      return (b.proj || 0) - (a.proj || 0);
+    });
+    const sortedPitchers = [...pitchers].sort((a, b) => {
+      if (a.pos !== b.pos) return a.pos === "SP" ? -1 : 1;
+      return (b.proj || 0) - (a.proj || 0);
+    });
+
+    const PlayerRow = ({ player, type }) => {
+      const [expanded, setExpanded] = useState(false);
+      const [starts, setStarts] = useState(player.weekStarts || 0);
+      const [status, setStatus] = useState(player.weekStatus || "start");
+      return (
+        <div style={{
+          background: status === "sit" ? "#0a0f1488" : "linear-gradient(135deg, #0d1520, #111b28)",
+          border: `1px solid ${status === "sit" ? "#1a1a2a" : player.isKeeper ? (player.keeperType === "major" ? "#00b4ff33" : "#00ff8833") : "#1a2a3a"}`,
+          borderLeft: player.isKeeper ? `3px solid ${player.keeperType === "major" ? "#00b4ff" : "#00ff88"}` : status === "sit" ? "3px solid #ff4a4a44" : "3px solid #1a2a3a",
+          borderRadius: 8, padding: "10px 14px", marginBottom: 4,
+          opacity: status === "sit" ? 0.5 : 1, transition: "all 0.2s",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ color: "#00b4ff", fontSize: 10, fontWeight: 700, background: "#00b4ff11", padding: "1px 6px", borderRadius: 4, minWidth: 24, textAlign: "center" }}>{player.pos}</span>
+                <span style={{ color: "#e0e6ed", fontWeight: 600, fontSize: 13 }}>{player.name}</span>
+                <span style={{ color: "#556677", fontSize: 10 }}>{player.team}</span>
+                {player.isKeeper && (
+                  <span style={{
+                    background: player.keeperType === "major" ? "#00b4ff22" : "#00ff8822",
+                    color: player.keeperType === "major" ? "#00b4ff" : "#00ff88",
+                    fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 8,
+                  }}>K{player.keeperYear}/{player.keeperMaxYears}</span>
+                )}
+                {type === "pitcher" && player.pos === "SP" && (
+                  <select value={starts} onChange={e => setStarts(parseInt(e.target.value))} style={{
+                    background: starts === 2 ? "#00ff8822" : "#0d1520", border: `1px solid ${starts === 2 ? "#00ff8844" : "#1a2a3a"}`,
+                    borderRadius: 4, color: starts === 2 ? "#00ff88" : "#8899aa", padding: "1px 4px", fontSize: 10, outline: "none"
+                  }}>
+                    <option value={0}>0 GS</option>
+                    <option value={1}>1 GS</option>
+                    <option value={2}>2 GS ★</option>
+                  </select>
+                )}
+              </div>
+              <div style={{ display: "flex", gap: 10, fontSize: 11, color: "#556677", marginTop: 2, marginLeft: 36 }}>
+                <span>PROJ: <span style={{ color: "#00b4ff" }}>{player.proj}</span></span>
+                {player.ecr && <span>ECR: {player.ecr}</span>}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 4 }}>
+              <button onClick={() => setStatus(status === "start" ? "sit" : "start")} style={{
+                background: status === "start" ? "#00ff8815" : "#ff4a4a15",
+                border: `1px solid ${status === "start" ? "#00ff8844" : "#ff4a4a44"}`,
+                borderRadius: 5, color: status === "start" ? "#00ff88" : "#ff4a4a",
+                padding: "3px 8px", cursor: "pointer", fontSize: 10, fontWeight: 700,
+              }}>
+                {status === "start" ? "START" : "SIT"}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <div>
+        {/* Week Header */}
+        <div style={{
+          background: "linear-gradient(135deg, #001a2a, #0d1520)",
+          border: "1px solid #00b4ff33", borderRadius: 12, padding: 16, marginBottom: 20,
+          textAlign: "center"
+        }}>
+          <div style={{ color: "#00b4ff", fontSize: 11, fontWeight: 700, letterSpacing: 2, marginBottom: 4 }}>WEEKLY LINEUP</div>
+          <div style={{ color: "#e0e6ed", fontSize: 18, fontWeight: 700 }}>Set Your Starters</div>
+          <div style={{ color: "#556677", fontSize: 12, marginTop: 4 }}>
+            Mark 2-start SPs for extra value • Toggle START/SIT for each player
+          </div>
+        </div>
+
+        {/* Batters */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <h3 style={{ color: "#e0e6ed", margin: 0, fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>BATTERS</h3>
+            <span style={{ color: "#556677", fontSize: 11 }}>{batters.length} players</span>
+          </div>
+          {sortedBatters.length === 0 ? (
+            <div style={{ color: "#556677", fontSize: 13, padding: 20, textAlign: "center", background: "#0a111a", borderRadius: 10, border: "1px solid #1a2a3a" }}>
+              Add players via Roster tab or Draft HQ to see your lineup here
+            </div>
+          ) : sortedBatters.map((p, i) => <PlayerRow key={`b-${i}`} player={p} type="batter" />)}
+        </div>
+
+        {/* Pitchers */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <h3 style={{ color: "#e0e6ed", margin: 0, fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>PITCHERS</h3>
+            <span style={{ color: "#556677", fontSize: 11 }}>{pitchers.length} players</span>
+            <span style={{ color: "#00ff88", fontSize: 10, marginLeft: "auto" }}>★ = 2-start week</span>
+          </div>
+          {sortedPitchers.length === 0 ? (
+            <div style={{ color: "#556677", fontSize: 13, padding: 20, textAlign: "center", background: "#0a111a", borderRadius: 10, border: "1px solid #1a2a3a" }}>
+              Add pitchers via Roster tab or Draft HQ
+            </div>
+          ) : sortedPitchers.map((p, i) => <PlayerRow key={`p-${i}`} player={p} type="pitcher" />)}
+        </div>
+
+        {/* Analyst Recommendations */}
+        <div style={{
+          background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 12, padding: 16, marginBottom: 20,
+        }}>
+          <div style={{ color: "#ffaa00", fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>📡 ANALYSTS TO FOLLOW</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {[
+              { name: "Pitcher List", handle: "@PitcherList", note: "Best SP analysis. Nick Pollack's daily pod is essential.", type: "Pitching" },
+              { name: "Tristan Cockcroft", handle: "@ESPN", note: "Points league guru. Best for your format.", type: "Overall" },
+              { name: "Eric Karabell", handle: "@ESPN", note: "H2H & roto expert. Injury tracker.", type: "Overall" },
+              { name: "Eric Samulski", handle: "@Rotoworld/NBC", note: "Deep position breakdowns. Prospect pipeline.", type: "Prospects" },
+              { name: "Jeff Erickson", handle: "@RotoWire", note: "FAAB strategy king. Two-start SP rankings.", type: "In-Season" },
+              { name: "Scott Pianowski", handle: "@Yahoo", note: "Position tier rankings. Contrarian takes.", type: "Draft" },
+              { name: "FantraxHQ", handle: "@FantraxHQ", note: "Dynasty/prospect rankings. Deep leagues.", type: "Dynasty" },
+              { name: "Baseball America", handle: "@BA_Fantasy", note: "Prospect scouting. RoboScout tool in-season.", type: "Prospects" },
+            ].map((a, i) => (
+              <div key={i} style={{
+                background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 8, padding: "8px 10px",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                  <span style={{ color: "#e0e6ed", fontSize: 12, fontWeight: 600 }}>{a.name}</span>
+                  <span style={{ color: "#00b4ff", fontSize: 9, background: "#00b4ff15", padding: "1px 5px", borderRadius: 4 }}>{a.type}</span>
+                </div>
+                <div style={{ color: "#667788", fontSize: 10 }}>{a.handle}</div>
+                <div style={{ color: "#556677", fontSize: 10, marginTop: 2, fontStyle: "italic" }}>{a.note}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Quick Scoring Cheat Sheet */}
+        <div style={{ background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 12, padding: 14 }}>
+          <div style={{ color: "#667788", fontSize: 11, fontWeight: 600, letterSpacing: 1, marginBottom: 8 }}>⚡ HIGH-VALUE SCORING PLAYS</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[
+              { label: "W", val: "+10", color: "#00ff88" },
+              { label: "S", val: "+7", color: "#00ff88" },
+              { label: "CG", val: "+5", color: "#00ff88" },
+              { label: "SO", val: "+5", color: "#00ff88" },
+              { label: "QS", val: "+4", color: "#00ff88" },
+              { label: "HR", val: "+4", color: "#00ff88" },
+              { label: "SB", val: "+1.75", color: "#88dd44" },
+              { label: "L", val: "-5", color: "#ff4a4a" },
+              { label: "KO", val: "-1", color: "#ff4a4a" },
+              { label: "ER", val: "-1", color: "#ff4a4a" },
+            ].map((s, i) => (
+              <div key={i} style={{
+                background: `${s.color}11`, border: `1px solid ${s.color}33`, borderRadius: 6,
+                padding: "3px 8px", fontSize: 10, color: s.color, fontWeight: 600,
+              }}>{s.label} {s.val}</div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // KEEPER MANAGEMENT TAB
+  // ============================================================
+  function KeepersTab() {
+    const [editIdx, setEditIdx] = useState(null);
+    const [addForm, setAddForm] = useState({ name: "", pos: "", team: "", type: "minor", year: 1, maxYears: 3, proj: 0, ecr: "", notes: "" });
+    const [showAdd, setShowAdd] = useState(false);
+    const deadline = new Date("2026-03-15T23:59:59");
+    const now = new Date();
+    const daysLeft = Math.max(0, Math.ceil((deadline - now) / (1000 * 60 * 60 * 24)));
+
+    return (
+      <div>
+        {/* Deadline Banner */}
+        <div style={{
+          background: daysLeft <= 3 ? "linear-gradient(135deg, #ff2a2a22, #ff6b3522)" : "linear-gradient(135deg, #00b4ff11, #00b4ff05)",
+          border: `1px solid ${daysLeft <= 3 ? "#ff6b3555" : "#00b4ff33"}`,
+          borderRadius: 12, padding: "14px 18px", marginBottom: 20,
+          display: "flex", alignItems: "center", justifyContent: "space-between"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {daysLeft <= 3 ? <Icons.Alert /> : <Icons.Clock />}
+            <span style={{ color: daysLeft <= 3 ? "#ff6b35" : "#8899aa", fontSize: 13, fontWeight: 600 }}>
+              KEEPER DEADLINE: March 15, 2025
+            </span>
+          </div>
+          <div style={{
+            background: daysLeft <= 3 ? "#ff2a2a33" : "#00b4ff22",
+            color: daysLeft <= 3 ? "#ff6b35" : "#00b4ff",
+            padding: "4px 12px", borderRadius: 20, fontSize: 13, fontWeight: 700
+          }}>
+            {daysLeft} days left
+          </div>
+        </div>
+
+        {/* Locked Keepers */}
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+            <Icons.Lock />
+            <h3 style={{ color: "#e0e6ed", margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>LOCKED KEEPERS</h3>
+          </div>
+          {keepers.map((k, i) => (
+            <div key={i} style={{
+              background: "linear-gradient(135deg, #0d1520, #111b28)",
+              border: k.type === "major" ? "1px solid #00b4ff44" : "1px solid #00ff8833",
+              borderRadius: 10, padding: "14px 16px", marginBottom: 8,
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              transition: "all 0.2s", cursor: "pointer",
+            }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = k.type === "major" ? "#00b4ff88" : "#00ff8888"}
+            onMouseLeave={e => e.currentTarget.style.borderColor = k.type === "major" ? "#00b4ff44" : "#00ff8833"}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <span style={{ color: "#e0e6ed", fontWeight: 700, fontSize: 15 }}>{k.name}</span>
+                  <span style={{
+                    background: k.type === "major" ? "#00b4ff22" : "#00ff8822",
+                    color: k.type === "major" ? "#00b4ff" : "#00ff88",
+                    fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10, letterSpacing: 0.5,
+                  }}>
+                    {k.type === "major" ? "MAJORS" : "MINORS"}
+                  </span>
+                  <span style={{ color: "#556677", fontSize: 12 }}>Yr {k.year}/{k.maxYears}</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 12, color: "#667788" }}>
+                  <span>{k.pos} • {k.team}</span>
+                  {k.age && <span>Age: <span style={{ color: "#b8c5d4" }}>{k.age}</span></span>}
+                  <span>PROJ: <span style={{ color: "#00b4ff", fontWeight: 600 }}>{k.proj}</span></span>
+                  <span>ECR: <span style={{ color: "#b8c5d4" }}>{k.ecr}</span></span>
+                </div>
+                {k.notes && <div style={{ fontSize: 11, color: "#556677", marginTop: 4, fontStyle: "italic" }}>{k.notes}</div>}
+              </div>
+              <button onClick={() => {
+                if (confirm(`Remove ${k.name} from keepers?`)) {
+                  setKeepers(prev => prev.filter((_, j) => j !== i));
+                }
+              }} style={{
+                background: "transparent", border: "1px solid #ff4a4a33", borderRadius: 6,
+                color: "#ff4a4a", padding: "4px 8px", cursor: "pointer", fontSize: 11
+              }}>
+                <Icons.Trash />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Keeper Watchlist */}
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+            <Icons.Star />
+            <h3 style={{ color: "#e0e6ed", margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>KEEPER WATCHLIST</h3>
+            <span style={{ color: "#556677", fontSize: 11 }}>Decision pending</span>
+          </div>
+          {keeperWatchlist.map((k, i) => (
+            <div key={i} style={{
+              background: "linear-gradient(135deg, #1a1200, #18150a)",
+              border: "1px solid #ffaa0033",
+              borderRadius: 10, padding: "14px 16px", marginBottom: 8,
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <span style={{ color: "#e0e6ed", fontWeight: 700, fontSize: 15 }}>{k.name}</span>
+                  <span style={{ background: "#ffaa0022", color: "#ffaa00", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10 }}>
+                    WATCHING
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 12, color: "#667788" }}>
+                  <span>{k.pos} • {k.team}</span>
+                  {k.age && <span>Age: <span style={{ color: "#b8c5d4" }}>{k.age}</span></span>}
+                  <span>PROJ: <span style={{ color: "#ffaa00", fontWeight: 600 }}>{k.proj}</span></span>
+                  <span>ECR: <span style={{ color: "#b8c5d4" }}>{k.ecr}</span></span>
+                </div>
+                {k.notes && <div style={{ fontSize: 11, color: "#887744", marginTop: 4, fontStyle: "italic" }}>{k.notes}</div>}
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={() => {
+                  if (keepers.length < 5) {
+                    setKeepers(prev => [...prev, { ...k, year: 1, maxYears: k.type === "major" ? 2 : 3 }]);
+                    setKeeperWatchlist(prev => prev.filter((_, j) => j !== i));
+                  } else {
+                    alert("Already at 5 keepers. Remove one first.");
+                  }
+                }} style={{
+                  background: "#00ff8822", border: "1px solid #00ff8844", borderRadius: 6,
+                  color: "#00ff88", padding: "4px 10px", cursor: "pointer", fontSize: 11, fontWeight: 600
+                }}>
+                  LOCK IN
+                </button>
+                <button onClick={() => setKeeperWatchlist(prev => prev.filter((_, j) => j !== i))} style={{
+                  background: "transparent", border: "1px solid #ff4a4a33", borderRadius: 6,
+                  color: "#ff4a4a", padding: "4px 8px", cursor: "pointer", fontSize: 11
+                }}>
+                  <Icons.Trash />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Add Keeper */}
+        <button onClick={() => setShowAdd(!showAdd)} style={{
+          background: "#00b4ff15", border: "1px dashed #00b4ff44", borderRadius: 10,
+          color: "#00b4ff", padding: "12px 18px", cursor: "pointer", fontSize: 13,
+          fontWeight: 600, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8
+        }}>
+          <Icons.Plus /> Add to Watchlist / Keepers
+        </button>
+        {showAdd && (
+          <div style={{ background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 10, padding: 16, marginTop: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {["name", "pos", "team", "ecr"].map(field => (
+                <input key={field} placeholder={field.toUpperCase()} value={addForm[field]}
+                  onChange={e => setAddForm(prev => ({ ...prev, [field]: e.target.value }))}
+                  style={{
+                    background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6,
+                    color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none"
+                  }} />
+              ))}
+              <input type="number" placeholder="PROJ" value={addForm.proj || ""}
+                onChange={e => setAddForm(prev => ({ ...prev, proj: parseFloat(e.target.value) || 0 }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none" }} />
+              <select value={addForm.type} onChange={e => setAddForm(prev => ({ ...prev, type: e.target.value }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none" }}>
+                <option value="major">Major League</option>
+                <option value="minor">Minor League</option>
+              </select>
+            </div>
+            <input placeholder="Notes" value={addForm.notes}
+              onChange={e => setAddForm(prev => ({ ...prev, notes: e.target.value }))}
+              style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, width: "100%", marginTop: 8, outline: "none", boxSizing: "border-box" }} />
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              <button onClick={() => {
+                if (addForm.name) {
+                  setKeeperWatchlist(prev => [...prev, { ...addForm }]);
+                  setAddForm({ name: "", pos: "", team: "", type: "minor", year: 1, maxYears: 3, proj: 0, ecr: "", notes: "" });
+                  setShowAdd(false);
+                }
+              }} style={{
+                background: "#ffaa0022", border: "1px solid #ffaa0044", borderRadius: 6,
+                color: "#ffaa00", padding: "8px 16px", cursor: "pointer", fontSize: 12, fontWeight: 600
+              }}>Add to Watchlist</button>
+              <button onClick={() => setShowAdd(false)} style={{
+                background: "transparent", border: "1px solid #334455", borderRadius: 6,
+                color: "#667788", padding: "8px 16px", cursor: "pointer", fontSize: 12
+              }}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {/* Scoring Reference */}
+        <div style={{ marginTop: 28 }}>
+          <h3 style={{ color: "#667788", fontSize: 13, fontWeight: 600, letterSpacing: 1, marginBottom: 10 }}>SCORING REFERENCE</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div style={{ background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 10, padding: 14 }}>
+              <div style={{ color: "#00b4ff", fontSize: 11, fontWeight: 700, marginBottom: 8, letterSpacing: 1 }}>BATTING</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 12px" }}>
+                {Object.entries(BATTING_SCORING).map(([k, v]) => (
+                  <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#8899aa", padding: "2px 0" }}>
+                    <span>{k}</span>
+                    <span style={{ color: v > 0 ? "#00ff88" : v < 0 ? "#ff4a4a" : "#8899aa", fontWeight: 600 }}>{v > 0 ? "+" : ""}{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 10, padding: 14 }}>
+              <div style={{ color: "#00b4ff", fontSize: 11, fontWeight: 700, marginBottom: 8, letterSpacing: 1 }}>PITCHING</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 12px" }}>
+                {Object.entries(PITCHING_SCORING).map(([k, v]) => (
+                  <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#8899aa", padding: "2px 0" }}>
+                    <span>{k}</span>
+                    <span style={{ color: v > 0 ? "#00ff88" : v < 0 ? "#ff4a4a" : "#8899aa", fontWeight: 600 }}>{v > 0 ? "+" : ""}{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // DRAFT HQ TAB
+  // ============================================================
+  function DraftTab() {
+    const [sortBy, setSortBy] = useState("proj");
+    const [posFilter, setPosFilter] = useState("ALL");
+    const [hideDrafted, setHideDrafted] = useState(false);
+    const [bulkInput, setBulkInput] = useState("");
+    const [showBulk, setShowBulk] = useState(false);
+    const [addPlayerForm, setAddPlayerForm] = useState({ name: "", pos: "", team: "", proj: 0, ecr: "", adp: 0, myRank: 0 });
+    const [showAddPlayer, setShowAddPlayer] = useState(false);
+
+    const positions = ["ALL", "C", "1B", "2B", "3B", "SS", "OF", "DH", "SP", "RP"];
+
+    // Positional need targets for a balanced roster
+    const posTargets = { C: 1, "1B": 1, "2B": 1, "3B": 1, SS: 1, OF: 4, DH: 1, SP: 5, RP: 3 };
+
+    // Current roster position counts (keepers + drafted)
+    const myPosCounts = useMemo(() => {
+      const counts = {};
+      const allMine = [
+        ...keepers.map(k => ({ pos: k.pos })),
+        ...roster.filter(r => !keepers.some(k => k.name === r.name)).map(r => ({ pos: r.pos })),
+      ];
+      allMine.forEach(p => { counts[p.pos] = (counts[p.pos] || 0) + 1; });
+      return counts;
+    }, [keepers, roster]);
+
+    // Positions still needed
+    const posNeeds = useMemo(() => {
+      const needs = {};
+      Object.entries(posTargets).forEach(([pos, target]) => {
+        const have = myPosCounts[pos] || 0;
+        const need = Math.max(0, target - have);
+        if (need > 0) needs[pos] = need;
+      });
+      return needs;
+    }, [myPosCounts]);
+
+    // Top 3 recommendations per position of need
+    const optimizer = useMemo(() => {
+      const available = draftPool.filter(p => !p.drafted);
+      const recs = {};
+      Object.keys(posNeeds).forEach(pos => {
+        const matches = available.filter(p => p.pos === pos || (pos === "OF" && p.pos?.includes("OF")));
+        matches.sort((a, b) => {
+          if ((a.myRank || 999) !== (b.myRank || 999)) return (a.myRank || 999) - (b.myRank || 999);
+          return (b.proj || 0) - (a.proj || 0);
+        });
+        recs[pos] = matches.slice(0, 3);
+      });
+      return recs;
+    }, [draftPool, posNeeds]);
+
+    const filteredPool = useMemo(() => {
+      let pool = [...draftPool];
+      if (hideDrafted) pool = pool.filter(p => !p.drafted);
+      if (posFilter !== "ALL") pool = pool.filter(p => p.pos === posFilter || (posFilter === "OF" && p.pos?.includes("OF")));
+      if (searchTerm) pool = pool.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+      pool.sort((a, b) => {
+        if (sortBy === "myRank") return (a.myRank || 999) - (b.myRank || 999);
+        if (sortBy === "adp") return (a.adp || 999) - (b.adp || 999);
+        return (b.proj || 0) - (a.proj || 0);
+      });
+      return pool;
+    }, [draftPool, posFilter, searchTerm, sortBy, hideDrafted]);
+
+    const parseBulkPlayers = (text) => {
+      const lines = text.split("\n").filter(l => l.trim());
+      const players = lines.map(line => {
+        const parts = line.split(/[,\t]+/).map(s => s.trim());
+        return {
+          name: parts[0] || "",
+          pos: parts[1] || "",
+          team: parts[2] || "",
+          proj: parseFloat(parts[3]) || 0,
+          ecr: parts[4] || "",
+          adp: parseFloat(parts[5]) || 0,
+          myRank: parseFloat(parts[6]) || 0,
+          drafted: false,
+          draftedBy: "",
+        };
+      }).filter(p => p.name);
+      return players;
+    };
+
+    const snakePicks = useMemo(() => {
+      if (!draftPick) return [];
+      const picks = [];
+      const rounds = 25;
+      for (let r = 1; r <= rounds; r++) {
+        const pick = r % 2 === 1
+          ? (r - 1) * LEAGUE_SIZE + draftPick
+          : r * LEAGUE_SIZE - draftPick + 1;
+        picks.push({ round: r, overall: pick });
+      }
+      return picks;
+    }, [draftPick]);
+
+    return (
+      <div>
+        {/* Draft Pick Setup */}
+        <div style={{
+          background: "linear-gradient(135deg, #0d1520, #111b28)",
+          border: "1px solid #1a2a3a", borderRadius: 12, padding: 16, marginBottom: 20,
+          display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12
+        }}>
+          <div>
+            <div style={{ color: "#667788", fontSize: 11, fontWeight: 600, letterSpacing: 1, marginBottom: 4 }}>YOUR DRAFT POSITION</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {draftPick ? (
+                <span style={{ color: "#00b4ff", fontSize: 28, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace" }}>
+                  #{draftPick}
+                </span>
+              ) : (
+                <span style={{ color: "#556677", fontSize: 15 }}>Not set</span>
+              )}
+              <select value={draftPick || ""} onChange={e => setDraftPick(parseInt(e.target.value) || null)}
+                style={{ background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "6px 10px", fontSize: 13, outline: "none" }}>
+                <option value="">Set pick...</option>
+                {Array.from({ length: 10 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>Pick #{i + 1}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {draftPick && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {snakePicks.slice(0, 8).map(p => (
+                <div key={p.round} style={{
+                  background: "#00b4ff11", border: "1px solid #00b4ff33", borderRadius: 6,
+                  padding: "4px 8px", fontSize: 11, color: "#00b4ff",
+                }}>
+                  R{p.round}: #{p.overall}
+                </div>
+              ))}
+              <span style={{ color: "#556677", fontSize: 11, alignSelf: "center" }}>...</span>
+            </div>
+          )}
+        </div>
+
+        {/* DRAFT OPTIMIZER — Top 3 per positional need */}
+        {Object.keys(posNeeds).length > 0 && draftPool.length > 0 && (
+          <div style={{
+            background: "linear-gradient(135deg, #001a2a, #0d1520)",
+            border: "1px solid #00b4ff33", borderRadius: 12, padding: 16, marginBottom: 20,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <span style={{ fontSize: 16 }}>⚡</span>
+              <h3 style={{ color: "#00b4ff", margin: 0, fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>DRAFT OPTIMIZER</h3>
+              <span style={{ color: "#556677", fontSize: 11 }}>Top 3 by positional need × your rank</span>
+            </div>
+            {/* Positional need badges */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+              {Object.entries(posNeeds).map(([pos, need]) => (
+                <div key={pos} style={{
+                  background: need >= 2 ? "#ff6b3522" : "#ffaa0015",
+                  border: `1px solid ${need >= 2 ? "#ff6b3544" : "#ffaa0033"}`,
+                  borderRadius: 6, padding: "3px 10px", fontSize: 11,
+                  color: need >= 2 ? "#ff6b35" : "#ffaa00", fontWeight: 600,
+                }}>
+                  {pos} ×{need} needed
+                </div>
+              ))}
+            </div>
+            {/* Recommendations grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 10 }}>
+              {Object.entries(optimizer).filter(([_, players]) => players.length > 0).map(([pos, players]) => (
+                <div key={pos} style={{
+                  background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 10, padding: 12,
+                }}>
+                  <div style={{ color: "#00b4ff", fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>
+                    TOP {pos}
+                  </div>
+                  {players.map((p, j) => (
+                    <div key={j} style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "6px 0", borderBottom: j < players.length - 1 ? "1px solid #111b28" : "none"
+                    }}>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{
+                            color: j === 0 ? "#00ff88" : j === 1 ? "#88dd44" : "#ffaa00",
+                            fontSize: 10, fontWeight: 800, minWidth: 16
+                          }}>#{j + 1}</span>
+                          <span style={{ color: "#e0e6ed", fontSize: 12, fontWeight: 600 }}>{p.name}</span>
+                        </div>
+                        <div style={{ fontSize: 10, color: "#556677", marginLeft: 22 }}>
+                          {p.team} • PROJ: <span style={{ color: "#00b4ff" }}>{p.proj}</span>
+                          {p.myRank > 0 && <> • Rank: <span style={{ color: "#ffaa00" }}>#{p.myRank}</span></>}
+                        </div>
+                      </div>
+                      <button onClick={() => {
+                        const idx = draftPool.findIndex(pl => pl.name === p.name && !pl.drafted);
+                        if (idx >= 0) {
+                          setDraftPool(prev => prev.map((pl, k) => k === idx ? { ...pl, drafted: true, draftedBy: "ME" } : pl));
+                          setRoster(prev => [...prev, { ...p, isKeeper: false }]);
+                          setDraftLog(prev => [...prev, { player: p.name, pos: p.pos, by: "ME", time: new Date().toISOString() }]);
+                        }
+                      }} style={{
+                        background: "#00ff8822", border: "1px solid #00ff8844", borderRadius: 5,
+                        color: "#00ff88", padding: "3px 8px", cursor: "pointer", fontSize: 9, fontWeight: 700
+                      }}>DRAFT</button>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Pool Management */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+          <button onClick={() => setShowBulk(!showBulk)} style={{
+            background: "#00b4ff15", border: "1px solid #00b4ff44", borderRadius: 8,
+            color: "#00b4ff", padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600
+          }}>
+            📋 Bulk Import
+          </button>
+          <button onClick={() => setShowAddPlayer(!showAddPlayer)} style={{
+            background: "#00ff8815", border: "1px solid #00ff8844", borderRadius: 8,
+            color: "#00ff88", padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600
+          }}>
+            <Icons.Plus /> Add Player
+          </button>
+          <button onClick={() => setHideDrafted(!hideDrafted)} style={{
+            background: hideDrafted ? "#ff6b3522" : "transparent",
+            border: `1px solid ${hideDrafted ? "#ff6b3566" : "#334455"}`,
+            borderRadius: 8, color: hideDrafted ? "#ff6b35" : "#667788",
+            padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600
+          }}>
+            {hideDrafted ? "✓ Hiding Drafted" : "Hide Drafted"}
+          </button>
+          <div style={{ color: "#556677", fontSize: 12, marginLeft: "auto" }}>
+            {draftPool.length} total • <span style={{ color: "#00ff88" }}>{draftPool.filter(p => !p.drafted).length} avail</span> • <span style={{ color: "#ff4a4a" }}>{draftPool.filter(p => p.drafted).length} gone</span>
+          </div>
+        </div>
+
+        {showBulk && (
+          <div style={{ background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 10, padding: 16, marginBottom: 16 }}>
+            <div style={{ color: "#8899aa", fontSize: 11, marginBottom: 8 }}>
+              Paste players: <span style={{ color: "#00b4ff" }}>Name, Pos, Team, Proj, ECR, ADP, MyRank</span> (one per line, comma or tab separated)
+            </div>
+            <textarea value={bulkInput} onChange={e => setBulkInput(e.target.value)}
+              placeholder={`Vladimir Guerrero Jr., 1B, TOR, 485.2, 1B1, 8, 5\nYordan Alvarez, OF, HOU, 450.4, DH3, 15, 12\nTrea Turner, SS, PHI, 439.6, SS5, 30, 25`}
+              style={{
+                background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6,
+                color: "#e0e6ed", padding: 12, fontSize: 12, width: "100%", minHeight: 120,
+                fontFamily: "'JetBrains Mono', monospace", outline: "none", resize: "vertical", boxSizing: "border-box"
+              }} />
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              <button onClick={() => {
+                const players = parseBulkPlayers(bulkInput);
+                if (players.length) {
+                  setDraftPool(prev => [...prev, ...players]);
+                  setBulkInput("");
+                  setShowBulk(false);
+                }
+              }} style={{
+                background: "#00b4ff22", border: "1px solid #00b4ff44", borderRadius: 6,
+                color: "#00b4ff", padding: "8px 16px", cursor: "pointer", fontSize: 12, fontWeight: 600
+              }}>Import {parseBulkPlayers(bulkInput).length} Players</button>
+              <button onClick={() => {
+                if (confirm("Clear entire draft pool?")) setDraftPool([]);
+              }} style={{
+                background: "#ff4a4a15", border: "1px solid #ff4a4a33", borderRadius: 6,
+                color: "#ff4a4a", padding: "8px 16px", cursor: "pointer", fontSize: 12
+              }}>Clear Pool</button>
+            </div>
+          </div>
+        )}
+
+        {showAddPlayer && (
+          <div style={{ background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 10, padding: 16, marginBottom: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+              <input placeholder="Name" value={addPlayerForm.name} onChange={e => setAddPlayerForm(p => ({ ...p, name: e.target.value }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none" }} />
+              <input placeholder="Pos" value={addPlayerForm.pos} onChange={e => setAddPlayerForm(p => ({ ...p, pos: e.target.value }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none" }} />
+              <input placeholder="Team" value={addPlayerForm.team} onChange={e => setAddPlayerForm(p => ({ ...p, team: e.target.value }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none" }} />
+              <input placeholder="Proj" type="number" value={addPlayerForm.proj || ""} onChange={e => setAddPlayerForm(p => ({ ...p, proj: parseFloat(e.target.value) || 0 }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none" }} />
+              <input placeholder="ECR" value={addPlayerForm.ecr} onChange={e => setAddPlayerForm(p => ({ ...p, ecr: e.target.value }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none" }} />
+              <input placeholder="ADP" type="number" value={addPlayerForm.adp || ""} onChange={e => setAddPlayerForm(p => ({ ...p, adp: parseFloat(e.target.value) || 0 }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none" }} />
+              <input placeholder="My Rank" type="number" value={addPlayerForm.myRank || ""} onChange={e => setAddPlayerForm(p => ({ ...p, myRank: parseFloat(e.target.value) || 0 }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none" }} />
+            </div>
+            <button onClick={() => {
+              if (addPlayerForm.name) {
+                setDraftPool(prev => [...prev, { ...addPlayerForm, drafted: false, draftedBy: "" }]);
+                setAddPlayerForm({ name: "", pos: "", team: "", proj: 0, ecr: "", adp: 0, myRank: 0 });
+                setShowAddPlayer(false);
+              }
+            }} style={{
+              background: "#00ff8822", border: "1px solid #00ff8844", borderRadius: 6,
+              color: "#00ff88", padding: "8px 16px", cursor: "pointer", fontSize: 12, fontWeight: 600, marginTop: 10
+            }}>Add to Pool</button>
+          </div>
+        )}
+
+        {/* Filters & Sort */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
+          {positions.map(pos => (
+            <button key={pos} onClick={() => setPosFilter(pos)} style={{
+              background: posFilter === pos ? "#00b4ff22" : "transparent",
+              border: `1px solid ${posFilter === pos ? "#00b4ff66" : "#1a2a3a"}`,
+              borderRadius: 6, color: posFilter === pos ? "#00b4ff" : "#556677",
+              padding: "4px 10px", cursor: "pointer", fontSize: 11, fontWeight: 600,
+            }}>{pos}</button>
+          ))}
+          <div style={{ flex: 1 }} />
+          <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{
+            background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6,
+            color: "#e0e6ed", padding: "4px 10px", fontSize: 11, outline: "none"
+          }}>
+            <option value="proj">Sort: Projection</option>
+            <option value="adp">Sort: ADP</option>
+            <option value="myRank">Sort: My Rank</option>
+          </select>
+          <input placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{
+            background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6,
+            color: "#e0e6ed", padding: "6px 12px", fontSize: 12, outline: "none", width: 140
+          }} />
+        </div>
+
+        {/* Player Pool List */}
+        <div style={{ maxHeight: 500, overflowY: "auto" }}>
+          {filteredPool.map((p, i) => {
+            const poolIdx = draftPool.findIndex(pl => pl.name === p.name && pl.pos === p.pos && pl.team === p.team);
+            return (
+            <div key={i} style={{
+              background: p.drafted ? "#0a111a55" : "linear-gradient(135deg, #0d1520, #111b28)",
+              border: `1px solid ${p.drafted ? "#1a1a2a" : "#1a2a3a"}`,
+              borderRadius: 8, padding: "10px 14px", marginBottom: 4,
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              opacity: p.drafted ? 0.4 : 1, transition: "all 0.2s"
+            }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {p.myRank > 0 && <span style={{ color: "#ffaa00", fontSize: 10, fontWeight: 800, minWidth: 28 }}>#{p.myRank}</span>}
+                  <span style={{ color: p.drafted ? "#556677" : "#e0e6ed", fontWeight: 600, fontSize: 13, textDecoration: p.drafted ? "line-through" : "none" }}>{p.name}</span>
+                  <span style={{ color: "#00b4ff", fontSize: 10, fontWeight: 600 }}>{p.pos}</span>
+                  <span style={{ color: "#556677", fontSize: 10 }}>{p.team}</span>
+                  {p.drafted && <span style={{ color: "#ff6b35", fontSize: 10, fontWeight: 600 }}>→ {p.draftedBy}</span>}
+                </div>
+                <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#556677", marginTop: 2, marginLeft: p.myRank > 0 ? 28 : 0 }}>
+                  <span>PROJ: <span style={{ color: "#00b4ff" }}>{p.proj}</span></span>
+                  {p.ecr && <span>ECR: {p.ecr}</span>}
+                  {p.adp > 0 && <span>ADP: {p.adp}</span>}
+                </div>
+              </div>
+              {!p.drafted ? (
+                <div style={{ display: "flex", gap: 4 }}>
+                  <button onClick={() => {
+                    setDraftPool(prev => prev.map((pl, j) => j === poolIdx ? { ...pl, drafted: true, draftedBy: "ME" } : pl));
+                    setRoster(prev => [...prev, { ...p, isKeeper: false }]);
+                    setDraftLog(prev => [...prev, { player: p.name, pos: p.pos, by: "ME", time: new Date().toISOString() }]);
+                  }} style={{
+                    background: "#00ff8822", border: "1px solid #00ff8844", borderRadius: 6,
+                    color: "#00ff88", padding: "4px 10px", cursor: "pointer", fontSize: 10, fontWeight: 700
+                  }}>DRAFT</button>
+                  <button onClick={() => {
+                    const team = prompt("Drafted by which team?");
+                    if (team) {
+                      setDraftPool(prev => prev.map((pl, j) => j === poolIdx ? { ...pl, drafted: true, draftedBy: team } : pl));
+                      setDraftLog(prev => [...prev, { player: p.name, pos: p.pos, by: team, time: new Date().toISOString() }]);
+                    }
+                  }} style={{
+                    background: "#ff6b3515", border: "1px solid #ff6b3533", borderRadius: 6,
+                    color: "#ff6b35", padding: "4px 8px", cursor: "pointer", fontSize: 10, fontWeight: 600
+                  }}>OFF</button>
+                  <button onClick={() => setWatchlist(prev => [...prev, p])} style={{
+                    background: "transparent", border: "1px solid #ffaa0033", borderRadius: 6,
+                    color: "#ffaa00", padding: "4px 6px", cursor: "pointer", fontSize: 10
+                  }}>★</button>
+                </div>
+              ) : (
+                <button onClick={() => {
+                  setDraftPool(prev => prev.map((pl, j) => j === poolIdx ? { ...pl, drafted: false, draftedBy: "" } : pl));
+                  if (p.draftedBy === "ME") setRoster(prev => prev.filter(r => r.name !== p.name));
+                  setDraftLog(prev => prev.filter(l => l.player !== p.name));
+                }} style={{
+                  background: "transparent", border: "1px solid #334455", borderRadius: 6,
+                  color: "#667788", padding: "4px 10px", cursor: "pointer", fontSize: 10
+                }}>UNDO</button>
+              )}
+            </div>
+          );})}
+          {filteredPool.length === 0 && (
+            <div style={{ textAlign: "center", padding: 40, color: "#556677" }}>
+              {draftPool.length === 0 ? "Import players to build your draft pool" : "No matching players"}
+            </div>
+          )}
+        </div>
+
+        {/* Draft Log */}
+        {draftLog.length > 0 && (
+          <div style={{ marginTop: 20 }}>
+            <h3 style={{ color: "#667788", fontSize: 13, fontWeight: 600, letterSpacing: 1, marginBottom: 10 }}>DRAFT LOG</h3>
+            <div style={{ maxHeight: 200, overflowY: "auto" }}>
+              {[...draftLog].reverse().map((l, i) => (
+                <div key={i} style={{ fontSize: 11, color: "#8899aa", padding: "4px 0", borderBottom: "1px solid #111b28" }}>
+                  <span style={{ color: l.by === "ME" ? "#00ff88" : "#ff6b35", fontWeight: 600 }}>{l.by}</span>
+                  {" → "}
+                  <span style={{ color: "#e0e6ed" }}>{l.player}</span>
+                  <span style={{ color: "#556677" }}> ({l.pos})</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ============================================================
+  // ROSTER TAB
+  // ============================================================
+  function RosterTab() {
+    const [showAdd, setShowAdd] = useState(false);
+    const [addForm, setAddForm] = useState({ name: "", pos: "", team: "", proj: 0, ecr: "", isKeeper: false, keeperYear: 0, keeperMaxYears: 0 });
+
+    const rosterWithKeepers = useMemo(() => {
+      const keeperPlayers = keepers.map(k => ({
+        name: k.name, pos: k.pos, team: k.team, proj: k.proj, ecr: k.ecr,
+        isKeeper: true, keeperType: k.type, keeperYear: k.year, keeperMaxYears: k.maxYears,
+      }));
+      const nonKeeperRoster = roster.filter(r => !keepers.some(k => k.name === r.name));
+      return [...keeperPlayers, ...nonKeeperRoster];
+    }, [roster, keepers]);
+
+    const posCounts = useMemo(() => {
+      const counts = {};
+      rosterWithKeepers.forEach(p => { counts[p.pos] = (counts[p.pos] || 0) + 1; });
+      return counts;
+    }, [rosterWithKeepers]);
+
+    return (
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ color: "#667788", fontSize: 12 }}>
+            {rosterWithKeepers.length} / {ROSTER_SLOTS.length} roster spots filled
+          </div>
+          <button onClick={() => setShowAdd(!showAdd)} style={{
+            background: "#00b4ff15", border: "1px solid #00b4ff44", borderRadius: 8,
+            color: "#00b4ff", padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600
+          }}><Icons.Plus /> Add Player</button>
+        </div>
+
+        {showAdd && (
+          <div style={{ background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 10, padding: 16, marginBottom: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+              <input placeholder="Name" value={addForm.name} onChange={e => setAddForm(p => ({ ...p, name: e.target.value }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none" }} />
+              <input placeholder="Pos" value={addForm.pos} onChange={e => setAddForm(p => ({ ...p, pos: e.target.value }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none" }} />
+              <input placeholder="Team" value={addForm.team} onChange={e => setAddForm(p => ({ ...p, team: e.target.value }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none" }} />
+              <input placeholder="Proj" type="number" value={addForm.proj || ""} onChange={e => setAddForm(p => ({ ...p, proj: parseFloat(e.target.value) || 0 }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none" }} />
+              <input placeholder="ECR" value={addForm.ecr} onChange={e => setAddForm(p => ({ ...p, ecr: e.target.value }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none" }} />
+            </div>
+            <button onClick={() => {
+              if (addForm.name) {
+                setRoster(prev => [...prev, { ...addForm }]);
+                setAddForm({ name: "", pos: "", team: "", proj: 0, ecr: "", isKeeper: false, keeperYear: 0, keeperMaxYears: 0 });
+                setShowAdd(false);
+              }
+            }} style={{
+              background: "#00ff8822", border: "1px solid #00ff8844", borderRadius: 6,
+              color: "#00ff88", padding: "8px 16px", cursor: "pointer", fontSize: 12, fontWeight: 600, marginTop: 10
+            }}>Add to Roster</button>
+          </div>
+        )}
+
+        {/* Roster Grid */}
+        <div>
+          {rosterWithKeepers.sort((a, b) => (b.proj || 0) - (a.proj || 0)).map((p, i) => (
+            <div key={i} style={{
+              background: p.isKeeper ? "linear-gradient(135deg, #0a1520, #0d1a28)" : "#0d1520",
+              border: `1px solid ${p.isKeeper ? (p.keeperType === "major" ? "#00b4ff33" : "#00ff8833") : "#1a2a3a"}`,
+              borderLeft: p.isKeeper ? `3px solid ${p.keeperType === "major" ? "#00b4ff" : "#00ff88"}` : "3px solid transparent",
+              borderRadius: 8, padding: "10px 14px", marginBottom: 4,
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ color: "#e0e6ed", fontWeight: 600, fontSize: 13 }}>{p.name}</span>
+                  <span style={{ color: "#00b4ff", fontSize: 10, fontWeight: 600, background: "#00b4ff11", padding: "1px 6px", borderRadius: 4 }}>{p.pos}</span>
+                  <span style={{ color: "#556677", fontSize: 10 }}>{p.team}</span>
+                  {p.isKeeper && (
+                    <span style={{
+                      background: p.keeperType === "major" ? "#00b4ff22" : "#00ff8822",
+                      color: p.keeperType === "major" ? "#00b4ff" : "#00ff88",
+                      fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 8, letterSpacing: 0.5,
+                    }}>
+                      K{p.keeperYear}/{p.keeperMaxYears}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: "flex", gap: 12, fontSize: 11, color: "#556677", marginTop: 2 }}>
+                  <span>PROJ: <span style={{ color: "#00b4ff" }}>{p.proj}</span></span>
+                  {p.ecr && <span>ECR: {p.ecr}</span>}
+                </div>
+              </div>
+              {!p.isKeeper && (
+                <button onClick={() => {
+                  setRoster(prev => prev.filter((_, j) => {
+                    const nonKeeperIdx = roster.findIndex(r => r.name === p.name);
+                    return j !== nonKeeperIdx;
+                  }));
+                }} style={{
+                  background: "transparent", border: "1px solid #ff4a4a33", borderRadius: 6,
+                  color: "#ff4a4a", padding: "4px 8px", cursor: "pointer", fontSize: 11
+                }}><Icons.Trash /></button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Position Summary */}
+        <div style={{ marginTop: 20, background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 10, padding: 14 }}>
+          <div style={{ color: "#667788", fontSize: 11, fontWeight: 600, letterSpacing: 1, marginBottom: 8 }}>POSITION BREAKDOWN</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {Object.entries(posCounts).sort().map(([pos, count]) => (
+              <div key={pos} style={{
+                background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6,
+                padding: "4px 10px", fontSize: 11
+              }}>
+                <span style={{ color: "#00b4ff", fontWeight: 600 }}>{pos}</span>
+                <span style={{ color: "#8899aa" }}> ×{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // FREE AGENT ANALYZER TAB
+  // ============================================================
+  function FreeAgentTab() {
+    const [myPlayer, setMyPlayer] = useState("");
+    const [faPlayer, setFaPlayer] = useState({ name: "", pos: "", team: "", proj: 0, ecr: "", stats: "" });
+    const [analysis, setAnalysis] = useState(null);
+
+    const allRosterPlayers = useMemo(() => {
+      const keeperPlayers = keepers.map(k => k.name);
+      return [...roster.map(r => r.name), ...keeperPlayers];
+    }, [roster, keepers]);
+
+    const selectedPlayer = useMemo(() => {
+      if (!myPlayer) return null;
+      const fromKeepers = keepers.find(k => k.name === myPlayer);
+      if (fromKeepers) return { ...fromKeepers, isKeeper: true };
+      return roster.find(r => r.name === myPlayer) || null;
+    }, [myPlayer, keepers, roster]);
+
+    const runAnalysis = () => {
+      if (!selectedPlayer || !faPlayer.name) return;
+      const projDiff = (faPlayer.proj || 0) - (selectedPlayer.proj || 0);
+      const analysis = {
+        projDiff,
+        recommendation: projDiff > 20 ? "STRONG ADD" : projDiff > 0 ? "MARGINAL ADD" : projDiff > -20 ? "MARGINAL HOLD" : "STRONG HOLD",
+        color: projDiff > 20 ? "#00ff88" : projDiff > 0 ? "#88dd44" : projDiff > -20 ? "#ffaa00" : "#ff4a4a",
+        keeperWarning: selectedPlayer.isKeeper,
+      };
+      setAnalysis(analysis);
+    };
+
+    return (
+      <div>
+        <div style={{ color: "#8899aa", fontSize: 13, marginBottom: 20 }}>
+          Compare a player on your roster against a free agent to evaluate the swap.
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+          {/* My Player */}
+          <div style={{ background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 10, padding: 16 }}>
+            <div style={{ color: "#ff6b35", fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>DROP CANDIDATE</div>
+            <select value={myPlayer} onChange={e => { setMyPlayer(e.target.value); setAnalysis(null); }}
+              style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, width: "100%", outline: "none", boxSizing: "border-box" }}>
+              <option value="">Select player...</option>
+              {allRosterPlayers.map((name, i) => <option key={i} value={name}>{name}</option>)}
+            </select>
+            {selectedPlayer && (
+              <div style={{ marginTop: 12, fontSize: 12, color: "#8899aa" }}>
+                <div>{selectedPlayer.pos} • {selectedPlayer.team}</div>
+                <div>PROJ: <span style={{ color: "#00b4ff", fontWeight: 600 }}>{selectedPlayer.proj}</span></div>
+                {selectedPlayer.ecr && <div>ECR: {selectedPlayer.ecr}</div>}
+                {selectedPlayer.isKeeper && (
+                  <div style={{ color: "#ff6b35", marginTop: 6, display: "flex", alignItems: "center", gap: 4 }}>
+                    <Icons.Alert /> KEEPER — dropping loses keeper value
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* FA Player */}
+          <div style={{ background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 10, padding: 16 }}>
+            <div style={{ color: "#00ff88", fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>ADD CANDIDATE</div>
+            <input placeholder="Player name" value={faPlayer.name}
+              onChange={e => { setFaPlayer(p => ({ ...p, name: e.target.value })); setAnalysis(null); }}
+              style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, width: "100%", outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              <input placeholder="Pos" value={faPlayer.pos} onChange={e => setFaPlayer(p => ({ ...p, pos: e.target.value }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "6px 10px", fontSize: 12, outline: "none" }} />
+              <input placeholder="Team" value={faPlayer.team} onChange={e => setFaPlayer(p => ({ ...p, team: e.target.value }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "6px 10px", fontSize: 12, outline: "none" }} />
+              <input placeholder="Proj" type="number" value={faPlayer.proj || ""} onChange={e => setFaPlayer(p => ({ ...p, proj: parseFloat(e.target.value) || 0 }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "6px 10px", fontSize: 12, outline: "none" }} />
+              <input placeholder="ECR" value={faPlayer.ecr} onChange={e => setFaPlayer(p => ({ ...p, ecr: e.target.value }))}
+                style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "6px 10px", fontSize: 12, outline: "none" }} />
+            </div>
+            <textarea placeholder="Notes / stats / context..." value={faPlayer.stats}
+              onChange={e => setFaPlayer(p => ({ ...p, stats: e.target.value }))}
+              style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 10px", fontSize: 12, width: "100%", marginTop: 8, outline: "none", minHeight: 60, resize: "vertical", boxSizing: "border-box" }} />
+          </div>
+        </div>
+
+        <button onClick={runAnalysis} disabled={!selectedPlayer || !faPlayer.name} style={{
+          background: selectedPlayer && faPlayer.name ? "#00b4ff22" : "#111b28",
+          border: `1px solid ${selectedPlayer && faPlayer.name ? "#00b4ff66" : "#1a2a3a"}`,
+          borderRadius: 10, color: selectedPlayer && faPlayer.name ? "#00b4ff" : "#556677",
+          padding: "12px 24px", cursor: selectedPlayer && faPlayer.name ? "pointer" : "not-allowed",
+          fontSize: 14, fontWeight: 700, width: "100%", letterSpacing: 1
+        }}>
+          ⚡ ANALYZE SWAP
+        </button>
+
+        {analysis && (
+          <div style={{
+            background: `${analysis.color}08`, border: `1px solid ${analysis.color}44`,
+            borderRadius: 12, padding: 20, marginTop: 16, textAlign: "center"
+          }}>
+            <div style={{ color: analysis.color, fontSize: 24, fontWeight: 800, marginBottom: 8 }}>
+              {analysis.recommendation}
+            </div>
+            <div style={{ color: "#8899aa", fontSize: 13, marginBottom: 12 }}>
+              Projection difference: <span style={{ color: analysis.color, fontWeight: 700 }}>
+                {analysis.projDiff > 0 ? "+" : ""}{analysis.projDiff.toFixed(1)} pts
+              </span>
+            </div>
+            {analysis.keeperWarning && (
+              <div style={{ color: "#ff6b35", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 8 }}>
+                <Icons.Alert /> WARNING: Dropping a keeper — consider long-term implications
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ============================================================
+  // TRADE ANALYZER TAB
+  // ============================================================
+  function TradeTab() {
+    const [theirInput, setTheirInput] = useState({ name: "", pos: "", team: "", proj: 0 });
+    const [myInput, setMyInput] = useState("");
+    const [result, setResult] = useState(null);
+
+    const allRosterPlayers = useMemo(() => {
+      const keeperPlayers = keepers.map(k => ({ ...k, isKeeper: true }));
+      return [...keeperPlayers, ...roster.filter(r => !keepers.some(k => k.name === r.name))];
+    }, [roster, keepers]);
+
+    const myTotal = useMemo(() => tradeMyPlayers.reduce((sum, p) => sum + (p.proj || 0), 0), [tradeMyPlayers]);
+    const theirTotal = useMemo(() => tradeTheirPlayers.reduce((sum, p) => sum + (p.proj || 0), 0), [tradeTheirPlayers]);
+    const diff = theirTotal - myTotal;
+    const hasBoth = tradeMyPlayers.length > 0 && tradeTheirPlayers.length > 0;
+    const verdict = diff > 30 ? "SMASH ACCEPT" : diff > 10 ? "LEAN ACCEPT" : diff > -10 ? "FAIR DEAL" : diff > -30 ? "LEAN DECLINE" : "HARD DECLINE";
+    const verdictColor = diff > 30 ? "#00ff88" : diff > 10 ? "#88dd44" : diff > -10 ? "#ffaa00" : diff > -30 ? "#ff6b35" : "#ff4a4a";
+    const hasKeeperRisk = tradeMyPlayers.some(p => p.isKeeper);
+
+    const inputStyle = {
+      background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6,
+      color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none", width: "100%", boxSizing: "border-box",
+    };
+
+    const PlayerCard = ({ player, onRemove, side }) => (
+      <div style={{
+        background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 8,
+        padding: "10px 12px", marginBottom: 6,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ color: "#e0e6ed", fontSize: 13, fontWeight: 600 }}>{player.name}</span>
+            {player.isKeeper && (
+              <span style={{ background: "#ff6b3522", color: "#ff6b35", fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 8 }}>KEEPER</span>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 8, fontSize: 11, color: "#556677", marginTop: 2 }}>
+            <span>{player.pos} • {player.team}</span>
+            <span>PROJ: <span style={{ color: "#00b4ff", fontWeight: 600 }}>{player.proj}</span></span>
+          </div>
+        </div>
+        <button onClick={onRemove} style={{
+          background: "transparent", border: "1px solid #ff4a4a22", borderRadius: 6,
+          color: "#ff4a4a88", padding: "4px 6px", cursor: "pointer", lineHeight: 1
+        }}><Icons.Minus /></button>
+      </div>
+    );
+
+    return (
+      <div>
+        <div style={{ color: "#8899aa", fontSize: 13, marginBottom: 20 }}>
+          Build both sides of a trade and compare projected point values.
+        </div>
+
+        {/* Verdict Banner — only show when both sides populated */}
+        {hasBoth && (
+          <div style={{
+            background: `${verdictColor}08`, border: `1px solid ${verdictColor}33`,
+            borderRadius: 12, padding: "16px 20px", marginBottom: 20,
+            display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12,
+          }}>
+            <div>
+              <div style={{ color: verdictColor, fontSize: 22, fontWeight: 800 }}>{verdict}</div>
+              <div style={{ color: "#8899aa", fontSize: 12, marginTop: 2 }}>
+                Net: <span style={{ color: verdictColor, fontWeight: 700 }}>{diff > 0 ? "+" : ""}{diff.toFixed(1)} pts</span>
+                {myTotal > 0 && <span style={{ color: "#556677" }}> ({((diff / myTotal) * 100).toFixed(1)}%)</span>}
+              </div>
+            </div>
+            {hasKeeperRisk && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#ff6b35", fontSize: 12 }}>
+                <Icons.Alert /> Trading away keeper(s)
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Two-column trade builder */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+          {/* I GIVE */}
+          <div style={{ background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 12, padding: 16, display: "flex", flexDirection: "column" }}>
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12,
+              paddingBottom: 10, borderBottom: "1px solid #1a2a3a"
+            }}>
+              <div style={{ color: "#ff6b35", fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>I GIVE</div>
+              <div style={{ color: "#ff6b35", fontSize: 14, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace" }}>
+                {myTotal.toFixed(0)} pts
+              </div>
+            </div>
+            <select value={myInput} onChange={e => {
+              const player = allRosterPlayers.find(p => p.name === e.target.value);
+              if (player && !tradeMyPlayers.some(p => p.name === player.name)) {
+                setTradeMyPlayers(prev => [...prev, player]);
+              }
+              setMyInput("");
+            }} style={{ ...inputStyle, marginBottom: 12 }}>
+              <option value="">+ Add from roster...</option>
+              {allRosterPlayers.filter(p => !tradeMyPlayers.some(tp => tp.name === p.name)).map((p, i) => (
+                <option key={i} value={p.name}>{p.name} ({p.pos} • {p.proj})</option>
+              ))}
+            </select>
+            <div style={{ flex: 1, minHeight: 80 }}>
+              {tradeMyPlayers.map((p, i) => (
+                <PlayerCard key={i} player={p} side="my" onRemove={() => setTradeMyPlayers(prev => prev.filter((_, j) => j !== i))} />
+              ))}
+              {tradeMyPlayers.length === 0 && (
+                <div style={{ color: "#334455", fontSize: 12, textAlign: "center", padding: 20 }}>Select players from your roster</div>
+              )}
+            </div>
+          </div>
+
+          {/* I RECEIVE */}
+          <div style={{ background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 12, padding: 16, display: "flex", flexDirection: "column" }}>
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12,
+              paddingBottom: 10, borderBottom: "1px solid #1a2a3a"
+            }}>
+              <div style={{ color: "#00ff88", fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>I RECEIVE</div>
+              <div style={{ color: "#00ff88", fontSize: 14, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace" }}>
+                {theirTotal.toFixed(0)} pts
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 6 }}>
+              <input placeholder="Name" value={theirInput.name} onChange={e => setTheirInput(p => ({ ...p, name: e.target.value }))}
+                style={inputStyle} />
+              <input placeholder="Proj" type="number" value={theirInput.proj || ""} onChange={e => setTheirInput(p => ({ ...p, proj: parseFloat(e.target.value) || 0 }))}
+                style={inputStyle} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
+              <input placeholder="Pos" value={theirInput.pos} onChange={e => setTheirInput(p => ({ ...p, pos: e.target.value }))}
+                style={inputStyle} />
+              <input placeholder="Team" value={theirInput.team} onChange={e => setTheirInput(p => ({ ...p, team: e.target.value }))}
+                style={inputStyle} />
+            </div>
+            <button onClick={() => {
+              if (theirInput.name) {
+                setTradeTheirPlayers(prev => [...prev, { ...theirInput }]);
+                setTheirInput({ name: "", pos: "", team: "", proj: 0 });
+              }
+            }} style={{
+              background: "#00ff8815", border: "1px solid #00ff8833", borderRadius: 6,
+              color: "#00ff88", padding: "6px 14px", cursor: "pointer", fontSize: 11, fontWeight: 600, marginBottom: 12, alignSelf: "flex-start"
+            }}>+ Add Player</button>
+            <div style={{ flex: 1, minHeight: 80 }}>
+              {tradeTheirPlayers.map((p, i) => (
+                <PlayerCard key={i} player={p} side="their" onRemove={() => setTradeTheirPlayers(prev => prev.filter((_, j) => j !== i))} />
+              ))}
+              {tradeTheirPlayers.length === 0 && (
+                <div style={{ color: "#334455", fontSize: 12, textAlign: "center", padding: 20 }}>Enter players you'd receive</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {(tradeMyPlayers.length > 0 || tradeTheirPlayers.length > 0) && (
+          <button onClick={() => { setTradeMyPlayers([]); setTradeTheirPlayers([]); }} style={{
+            background: "transparent", border: "1px solid #334455", borderRadius: 8,
+            color: "#667788", padding: "8px 16px", cursor: "pointer", fontSize: 12, width: "100%"
+          }}>Clear Trade</button>
+        )}
+      </div>
+    );
+  }
+
+  // ============================================================
+  // INTEL FEED TAB
+  // ============================================================
+  function IntelTab() {
+    const [searchName, setSearchName] = useState("");
+    const [searchLoading, setSearchLoading] = useState(false);
+    const [searchResult, setSearchResult] = useState(null);
+    const [newItem, setNewItem] = useState({ player: "", source: "", type: "riser", note: "" });
+
+    const typeColors = {
+      riser: { bg: "#00ff8822", color: "#00ff88", label: "📈 RISER" },
+      faller: { bg: "#ff4a4a22", color: "#ff4a4a", label: "📉 FALLER" },
+      news: { bg: "#00b4ff22", color: "#00b4ff", label: "📰 NEWS" },
+      pickup: { bg: "#ffaa0022", color: "#ffaa00", label: "🎯 PICKUP" },
+      injury: { bg: "#ff6b3522", color: "#ff6b35", label: "🚑 INJURY" },
+      analysis: { bg: "#9966ff22", color: "#9966ff", label: "🔬 ANALYSIS" },
+    };
+
+    const searchPlayer = async () => {
+      if (!searchName.trim()) return;
+      setSearchLoading(true);
+      setSearchResult(null);
+      try {
+        const response = await fetch("/api/intel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ playerName: searchName.trim() })
+        });
+        
+        if (!response.ok) {
+          const errText = await response.text().catch(() => "unknown");
+          throw new Error(`HTTP ${response.status}: ${errText.slice(0, 300)}`);
+        }
+        
+        const data = await response.json();
+        
+        let parsed = data.parsed || null;
+        let rawText = data.rawText || null;
+
+        // If raw text fallback (JSON parse failed server-side)
+        if (rawText && !parsed) {
+          setSearchResult({ player: searchName.trim(), parsed: null, rawText, date: new Date().toISOString() });
+          return;
+        }
+
+        // Cross-reference with local data to correct hallucinations
+        const localMatch = [...keepers, ...keeperWatchlist, ...roster].find(
+          p => p.name.toLowerCase().includes(searchName.trim().toLowerCase()) || 
+               searchName.trim().toLowerCase().includes(p.name.toLowerCase())
+        );
+        if (localMatch && parsed) {
+          if (localMatch.pos) parsed.pos = localMatch.pos;
+          if (localMatch.age) parsed.age = localMatch.age;
+          if (localMatch.team) parsed.team = localMatch.team;
+          if (localMatch.proj) parsed.proj_points = localMatch.proj;
+          parsed.local_override = true;
+        }
+
+        setSearchResult({ player: searchName.trim(), parsed, rawText: null, date: new Date().toISOString() });
+      } catch (err) {
+        console.error("Search error:", err);
+        setSearchResult({ 
+          player: searchName.trim(), 
+          parsed: null,
+          rawText: `Search error: ${err.message}\n\nQuick links for manual research:\n• rotowire.com/baseball/player/${searchName.trim().toLowerCase().replace(/[.\s]+/g, '-')}\n• fantasypros.com/mlb — Expert consensus\n• pitcherlist.com — SP analysis\n• nbcsports.com/fantasy/baseball — Rotoworld\n• espn.com/fantasy/baseball — Cockcroft & Karabell`, 
+          date: new Date().toISOString() 
+        });
+      }
+      setSearchLoading(false);
+    };
+
+    const SentimentBadge = ({ level, reason, label }) => {
+      const colors = { positive: "#00ff88", neutral: "#ffaa00", negative: "#ff4a4a" };
+      const icons = { positive: "▲", neutral: "●", negative: "▼" };
+      const c = colors[level] || colors.neutral;
+      return (
+        <div style={{ flex: 1 }}>
+          <div style={{ color: "#667788", fontSize: 9, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>{label}</div>
+          <div style={{
+            background: `${c}11`, border: `1px solid ${c}33`, borderRadius: 8, padding: "8px 10px",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ color: c, fontSize: 14, fontWeight: 800 }}>{icons[level] || "●"}</span>
+              <span style={{ color: c, fontSize: 12, fontWeight: 700, textTransform: "uppercase" }}>{level || "N/A"}</span>
+            </div>
+            {reason && <div style={{ color: "#8899aa", fontSize: 10, marginTop: 4, lineHeight: 1.4 }}>{reason}</div>}
+          </div>
+        </div>
+      );
+    };
+
+    const RoleSecurityGauge = ({ level, reason }) => {
+      const colors = { green: "#00ff88", yellow: "#ffaa00", red: "#ff4a4a" };
+      const labels = { green: "LOCKED IN", yellow: "MONITOR", red: "AT RISK" };
+      const c = colors[level] || colors.yellow;
+      return (
+        <div>
+          <div style={{ color: "#667788", fontSize: 9, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>ROLE SECURITY</div>
+          <div style={{
+            background: `${c}11`, border: `1px solid ${c}33`, borderRadius: 8, padding: "10px 12px",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <div style={{
+                width: 10, height: 10, borderRadius: "50%", background: c,
+                boxShadow: `0 0 8px ${c}66`,
+              }} />
+              <span style={{ color: c, fontSize: 13, fontWeight: 800 }}>{labels[level] || "UNKNOWN"}</span>
+            </div>
+            {reason && <div style={{ color: "#8899aa", fontSize: 11, lineHeight: 1.4 }}>{reason}</div>}
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <div>
+        {/* Player Search — main feature */}
+        <div style={{
+          background: "linear-gradient(135deg, #001a2a, #0d1520)",
+          border: "1px solid #00b4ff33", borderRadius: 12, padding: 20, marginBottom: 24,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 16 }}>🔍</span>
+            <h3 style={{ color: "#00b4ff", margin: 0, fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>PLAYER INTEL SEARCH</h3>
+          </div>
+          <div style={{ color: "#8899aa", fontSize: 12, marginBottom: 12 }}>
+            Search any player for latest news, expert analysis, injury updates, and ROS outlook from Rotowire, CBS, ESPN, Pitcher List, and more.
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              placeholder="Enter player name (e.g. Garrett Crochet)..."
+              value={searchName}
+              onChange={e => setSearchName(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && searchPlayer()}
+              style={{
+                flex: 1, background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 8,
+                color: "#e0e6ed", padding: "10px 14px", fontSize: 14, outline: "none",
+              }}
+            />
+            <button onClick={searchPlayer} disabled={searchLoading || !searchName.trim()} style={{
+              background: searchLoading ? "#334455" : "#00b4ff22",
+              border: `1px solid ${searchLoading ? "#334455" : "#00b4ff66"}`,
+              borderRadius: 8, color: searchLoading ? "#667788" : "#00b4ff",
+              padding: "10px 20px", cursor: searchLoading ? "wait" : "pointer",
+              fontSize: 13, fontWeight: 700, letterSpacing: 0.5, minWidth: 100,
+            }}>
+              {searchLoading ? "Searching..." : "⚡ SEARCH"}
+            </button>
+          </div>
+
+          {/* Search Result */}
+          {searchResult && (
+            <div style={{
+              background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 10,
+              padding: 16, marginTop: 16,
+            }}>
+              {searchResult.parsed ? (() => {
+                const p = searchResult.parsed;
+                const verdictColors = { RISER: "#00ff88", FALLER: "#ff4a4a", HOLD: "#ffaa00" };
+                const vc = verdictColors[p.verdict] || "#ffaa00";
+                return (
+                  <>
+                    {/* Header */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ color: "#00b4ff", fontSize: 10, fontWeight: 700, background: "#00b4ff22", padding: "2px 8px", borderRadius: 10 }}>INTEL REPORT</span>
+                        <span style={{ color: "#e0e6ed", fontWeight: 700, fontSize: 16 }}>{p.name || searchResult.player}</span>
+                        {p.pos && <span style={{ color: "#00b4ff", fontSize: 10, fontWeight: 600 }}>{p.pos}</span>}
+                        {p.team && <span style={{ color: "#556677", fontSize: 10 }}>{p.team}</span>}
+                        {p.age && <span style={{ color: "#8899aa", fontSize: 10 }}>Age {p.age}</span>}
+                        {p.local_override && <span style={{ color: "#ffaa00", fontSize: 8, fontWeight: 700, background: "#ffaa0022", padding: "1px 5px", borderRadius: 4 }}>LOCAL DATA</span>}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {p.proj_points && (
+                          <span style={{ color: "#00b4ff", fontSize: 12, fontWeight: 700, background: "#00b4ff11", padding: "3px 8px", borderRadius: 6 }}>
+                            {p.proj_points} pts
+                          </span>
+                        )}
+                        <span style={{
+                          color: vc, fontSize: 11, fontWeight: 800, background: `${vc}22`,
+                          padding: "3px 10px", borderRadius: 10, letterSpacing: 1,
+                        }}>
+                          {p.verdict === "RISER" ? "📈" : p.verdict === "FALLER" ? "📉" : "📊"} {p.verdict}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Tactical Dashboard Row */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
+                      <SentimentBadge level={p.sentiment_3day} reason={p.sentiment_3day_reason} label="LAST 3 DAYS" />
+                      <SentimentBadge level={p.sentiment_week} reason={p.sentiment_week_reason} label="LAST WEEK" />
+                      <RoleSecurityGauge level={p.role_security} reason={p.role_security_reason} />
+                    </div>
+
+                    {/* Key Risk / Upside */}
+                    {(p.key_risk || p.key_upside) && (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                        {p.key_upside && (
+                          <div style={{ background: "#00ff8808", border: "1px solid #00ff8822", borderRadius: 8, padding: "8px 10px" }}>
+                            <div style={{ color: "#00ff88", fontSize: 9, fontWeight: 700, letterSpacing: 1, marginBottom: 3 }}>⬆ KEY UPSIDE</div>
+                            <div style={{ color: "#b8c5d4", fontSize: 11, lineHeight: 1.4 }}>{p.key_upside}</div>
+                          </div>
+                        )}
+                        {p.key_risk && (
+                          <div style={{ background: "#ff4a4a08", border: "1px solid #ff4a4a22", borderRadius: 8, padding: "8px 10px" }}>
+                            <div style={{ color: "#ff4a4a", fontSize: 9, fontWeight: 700, letterSpacing: 1, marginBottom: 3 }}>⬇ KEY RISK</div>
+                            <div style={{ color: "#b8c5d4", fontSize: 11, lineHeight: 1.4 }}>{p.key_risk}</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Strategic Analysis */}
+                    <div style={{
+                      background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 8, padding: 12, marginBottom: 12,
+                    }}>
+                      <div style={{ color: "#667788", fontSize: 9, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>STRATEGIC ANALYSIS</div>
+                      <div style={{ color: "#b8c5d4", fontSize: 12, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+                        {p.strategic}
+                      </div>
+                    </div>
+
+                    <button onClick={() => {
+                      setNews(prev => [{
+                        player: p.name || searchResult.player, source: "AI Intel", type: p.verdict === "RISER" ? "riser" : p.verdict === "FALLER" ? "faller" : "analysis",
+                        note: `[${p.verdict}] Role: ${p.role_security?.toUpperCase()} | 3-Day: ${p.sentiment_3day} | Week: ${p.sentiment_week}\nUpside: ${p.key_upside || "—"}\nRisk: ${p.key_risk || "—"}\n\n${p.strategic}`,
+                        date: searchResult.date
+                      }, ...prev]);
+                    }} style={{
+                      background: "#9966ff15", border: "1px solid #9966ff33", borderRadius: 6,
+                      color: "#9966ff", padding: "6px 14px", cursor: "pointer", fontSize: 11, fontWeight: 600,
+                    }}>💾 Save to Intel Feed</button>
+                  </>
+                );
+              })() : (
+                <>
+                  {/* Fallback for raw text / errors */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ color: "#00b4ff", fontSize: 10, fontWeight: 700, background: "#00b4ff22", padding: "2px 8px", borderRadius: 10 }}>INTEL REPORT</span>
+                      <span style={{ color: "#e0e6ed", fontWeight: 700, fontSize: 15 }}>{searchResult.player}</span>
+                    </div>
+                    <span style={{ color: "#334455", fontSize: 10 }}>{new Date(searchResult.date).toLocaleString()}</span>
+                  </div>
+                  <div style={{ color: "#b8c5d4", fontSize: 13, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+                    {searchResult.rawText}
+                  </div>
+                  <button onClick={() => {
+                    setNews(prev => [{
+                      player: searchResult.player, source: "AI Intel", type: "analysis",
+                      note: searchResult.rawText, date: searchResult.date
+                    }, ...prev]);
+                  }} style={{
+                    background: "#9966ff15", border: "1px solid #9966ff33", borderRadius: 6,
+                    color: "#9966ff", padding: "6px 14px", cursor: "pointer", fontSize: 11, fontWeight: 600, marginTop: 12,
+                  }}>💾 Save to Intel Feed</button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Manual Intel Entry */}
+        <div style={{ background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 10, padding: 16, marginBottom: 20 }}>
+          <div style={{ color: "#667788", fontSize: 11, fontWeight: 600, letterSpacing: 1, marginBottom: 10 }}>ADD MANUAL INTEL</div>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 8 }}>
+            <input placeholder="Player name" value={newItem.player} onChange={e => setNewItem(p => ({ ...p, player: e.target.value }))}
+              style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none" }} />
+            <select value={newItem.type} onChange={e => setNewItem(p => ({ ...p, type: e.target.value }))}
+              style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none" }}>
+              {Object.entries(typeColors).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+            <input placeholder="Source" value={newItem.source} onChange={e => setNewItem(p => ({ ...p, source: e.target.value }))}
+              style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 13, outline: "none" }} />
+          </div>
+          <textarea placeholder="Notes / analysis / context..." value={newItem.note}
+            onChange={e => setNewItem(p => ({ ...p, note: e.target.value }))}
+            style={{ background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 6, color: "#e0e6ed", padding: "8px 12px", fontSize: 12, width: "100%", marginTop: 8, outline: "none", minHeight: 60, resize: "vertical", boxSizing: "border-box" }} />
+          <button onClick={() => {
+            if (newItem.player) {
+              setNews(prev => [{ ...newItem, date: new Date().toISOString() }, ...prev]);
+              setNewItem({ player: "", source: "", type: "riser", note: "" });
+            }
+          }} style={{
+            background: "#00b4ff22", border: "1px solid #00b4ff44", borderRadius: 6,
+            color: "#00b4ff", padding: "8px 16px", cursor: "pointer", fontSize: 12, fontWeight: 600, marginTop: 10
+          }}>Add Intel</button>
+        </div>
+
+        {/* Saved Intel Feed */}
+        {news.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 40, color: "#556677" }}>
+            Search for players above or add manual intel. All entries are saved here.
+          </div>
+        ) : (
+          <div>
+            <div style={{ color: "#667788", fontSize: 11, fontWeight: 600, letterSpacing: 1, marginBottom: 10 }}>SAVED INTEL ({news.length})</div>
+            {news.map((item, i) => {
+              const tc = typeColors[item.type] || typeColors.news;
+              return (
+                <div key={i} style={{
+                  background: tc.bg + "44", border: `1px solid ${tc.color}33`,
+                  borderRadius: 10, padding: "12px 16px", marginBottom: 8
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ color: tc.color, fontSize: 10, fontWeight: 700, background: tc.bg, padding: "2px 8px", borderRadius: 10 }}>
+                        {tc.label}
+                      </span>
+                      <span style={{ color: "#e0e6ed", fontWeight: 700, fontSize: 14 }}>{item.player}</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {item.source && <span style={{ color: "#556677", fontSize: 10 }}>{item.source}</span>}
+                      <span style={{ color: "#334455", fontSize: 10 }}>
+                        {new Date(item.date).toLocaleDateString()}
+                      </span>
+                      <button onClick={() => setNews(prev => prev.filter((_, j) => j !== i))} style={{
+                        background: "transparent", border: "none", color: "#ff4a4a55", cursor: "pointer", padding: 2
+                      }}><Icons.Trash /></button>
+                    </div>
+                  </div>
+                  {item.note && <div style={{ color: "#8899aa", fontSize: 12, lineHeight: 1.5, whiteSpace: "pre-wrap", maxHeight: 150, overflow: "auto" }}>{item.note}</div>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Quick Notes */}
+        <div style={{ marginTop: 24 }}>
+          <h3 style={{ color: "#667788", fontSize: 13, fontWeight: 600, letterSpacing: 1, marginBottom: 10 }}>SCRATCH PAD</h3>
+          <textarea value={notes} onChange={e => setNotes(e.target.value)}
+            placeholder="Quick notes, draft strategy thoughts, trade targets..."
+            style={{
+              background: "#0a111a", border: "1px solid #1a2a3a", borderRadius: 10,
+              color: "#e0e6ed", padding: 14, fontSize: 13, width: "100%", minHeight: 120,
+              outline: "none", resize: "vertical", lineHeight: 1.6, boxSizing: "border-box"
+            }} />
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // RENDER
+  // ============================================================
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: `
+        radial-gradient(ellipse at 20% 50%, #001a3311 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, #00b4ff06 0%, transparent 40%),
+        linear-gradient(180deg, #060a10 0%, #0a0f18 50%, #060a10 100%)
+      `,
+      color: "#e0e6ed",
+      fontFamily: "'Geist', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+    }}>
+      {/* Carbon fiber texture overlay */}
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, bottom: 0, pointerEvents: "none", zIndex: 0,
+        backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 2px, #ffffff01 2px, #ffffff01 4px),
+          repeating-linear-gradient(90deg, transparent, transparent 2px, #ffffff01 2px, #ffffff01 4px)`,
+        backgroundSize: "4px 4px"
+      }} />
+
+      <div style={{ position: "relative", zIndex: 1, maxWidth: 900, margin: "0 auto", padding: "0 16px" }}>
+        {/* Header */}
+        <div style={{ padding: "24px 0 16px", textAlign: "center" }}>
+          <div style={{
+            fontSize: 11, fontWeight: 700, letterSpacing: 4, color: "#00b4ff",
+            marginBottom: 6, textTransform: "uppercase"
+          }}>
+            IAMFBL • 10-Team Points League
+          </div>
+          <h1 style={{
+            fontSize: 28, fontWeight: 800, margin: 0,
+            background: "linear-gradient(135deg, #e0e6ed 0%, #00b4ff 100%)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+            letterSpacing: -0.5
+          }}>
+            Fantasy Command Center
+          </h1>
+          <div style={{ color: "#556677", fontSize: 12, marginTop: 4 }}>
+            {TEAM_NAME} • 2026 Season
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div style={{
+          display: "flex", gap: 2, marginBottom: 24,
+          background: "#0a0f18", borderRadius: 12, padding: 4,
+          border: "1px solid #1a2a3a", overflowX: "auto"
+        }}>
+          {tabs.map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+              flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              padding: "10px 12px", borderRadius: 10, border: "none", cursor: "pointer",
+              fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", minWidth: 0,
+              background: activeTab === tab.id ? "linear-gradient(135deg, #00b4ff22, #00b4ff11)" : "transparent",
+              color: activeTab === tab.id ? "#00b4ff" : "#556677",
+              transition: "all 0.2s"
+            }}>
+              {tab.icon}
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div style={{ paddingBottom: 40 }}>
+          {activeTab === "myteam" && <MyTeamTab />}
+          {activeTab === "keepers" && <KeepersTab />}
+          {activeTab === "draft" && <DraftTab />}
+          {activeTab === "roster" && <RosterTab />}
+          {activeTab === "freeagent" && <FreeAgentTab />}
+          {activeTab === "trade" && <TradeTab />}
+          {activeTab === "intel" && <IntelTab />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(React.createElement(window.__FantasyApp));
+  </script>
+</body>
+</html>
