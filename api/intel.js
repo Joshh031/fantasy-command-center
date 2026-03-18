@@ -9,9 +9,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { playerName } = req.body;
+    const { playerName, playerContext } = req.body;
     if (!playerName) {
       return res.status(400).json({ error: 'playerName required' });
+    }
+
+    // Build context hint if local player data was provided
+    let contextHint = "";
+    if (playerContext && playerContext.pos && playerContext.team) {
+      contextHint = `\n\nIMPORTANT PLAYER IDENTITY: This is ${playerContext.name || playerName}, who plays ${playerContext.pos} for ${playerContext.team}${playerContext.age ? ` (age ${playerContext.age})` : ""}. Make sure your analysis is specifically about THIS player at THIS position on THIS team. Do not confuse with other players who share a similar name.`;
     }
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -27,7 +33,7 @@ export default async function handler(req, res) {
         system: "You are an elite fantasy baseball analyst with deep expertise in points leagues. You must respond ONLY with valid JSON, no other text. Current date is " + new Date().toISOString().split('T')[0] + ".",
         messages: [{
           role: "user",
-          content: `Provide a comprehensive 2026 fantasy baseball analysis for "${playerName}". 
+          content: `Provide a comprehensive 2026 fantasy baseball analysis for "${playerName}".${contextHint}
 
 IMPORTANT: Use CBS Sports positional eligibility for the "pos" field — this means the position the player qualifies for on CBSSports.com fantasy baseball. If a player has multi-position eligibility on CBS, list all separated by slashes.
 

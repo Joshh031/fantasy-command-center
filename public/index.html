@@ -1394,10 +1394,24 @@ function IntelTab() {
     setSearchLoading(true);
     setSearchResult(null);
     try {
+      // Check for local player data to send as context for more accurate AI analysis
+      const localMatch = [...keepers, ...keeperWatchlist, ...roster].find(
+        p => p.name.toLowerCase().includes(searchName.trim().toLowerCase()) ||
+             searchName.trim().toLowerCase().includes(p.name.toLowerCase())
+      );
+      const body = { playerName: searchName.trim() };
+      if (localMatch) {
+        body.playerContext = {
+          name: localMatch.name,
+          pos: localMatch.pos,
+          team: localMatch.team,
+          age: localMatch.age
+        };
+      }
       const response = await fetch("/api/intel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playerName: searchName.trim() })
+        body: JSON.stringify(body)
       });
       
       if (!response.ok) {
