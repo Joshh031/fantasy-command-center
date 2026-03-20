@@ -43,13 +43,39 @@ const PITCHING_SCORING = {
   L: -5, NH: 10, PG: 20, PKO: 2, QS: 4, S: 7, SO: 5, W: 10,
 };
 
+// Auction keeper league settings
+const AUCTION_CAP = 145;
+
+const TIER_LABELS = {
+  1: "Tier 1 — Untouchable",
+  2: "Tier 2 — Strong Keeps",
+  3: "Tier 3 — Solid Value",
+  4: "Tier 4 — Borderline",
+  5: "Tier 5 — Cut Candidates",
+};
+
+const TIER_COLORS = {
+  1: "#00ff88",
+  2: "#00b4ff",
+  3: "#ffaa00",
+  4: "#ff6b35",
+  5: "#ff4a4a",
+};
+
+const POSITIONS_LIST = ["SP", "RP", "C", "1B", "2B", "3B", "SS", "OF", "DH", "MI", "CI"];
+const TEAMS_LIST = ["ARI","ATL","BAL","BOS","CHC","CHW","CIN","CLE","COL","DET","HOU","KC","LAA","LAD","MIA","MIL","MIN","NYM","NYY","OAK","PHI","PIT","SD","SF","SEA","STL","TB","TEX","TOR","WSH"];
+
 // Initial keepers
 const INITIAL_KEEPERS = [
-  { name: "Garrett Crochet", pos: "SP", team: "BOS", type: "major", year: 1, maxYears: 2, proj: 412.2, ecr: "SP2", age: 26, notes: "Ace. SP2 overall." },
-  { name: "Cal Raleigh", pos: "C", team: "SEA", type: "major", year: 1, maxYears: 2, proj: 444.5, ecr: "C1", age: 29, notes: "Dominant C1. Positional scarcity." },
-  { name: "Junior Caminero", pos: "3B", team: "TB", type: "minor", year: 1, maxYears: 3, proj: 445.1, ecr: "3B2", age: 22, notes: "45 HR breakout. Elite power." },
-  { name: "Nolan McLean", pos: "SP", team: "NYM", type: "minor", year: 1, maxYears: 3, proj: 347.5, ecr: "SP29", age: 23, notes: "Young arm, high upside." },
-  { name: "Konnor Griffin", pos: "SS", team: "PIT", type: "minor", year: 1, maxYears: 3, proj: 150.1, ecr: "SS20", age: 19, notes: "Toolsy prospect. Long-term play." },
+  { name: "Chris Sale", pos: "SP", team: "ATL", value: 13, tier: 1, type: "major", year: 1, maxYears: 2, proj: 380, ecr: "SP5", age: 37, notes: "Ace arm. Elite K upside." },
+  { name: "Jesús Made", pos: "OF", team: "MIA", value: 0, tier: 1, type: "minor", year: 1, maxYears: 3, proj: 0, ecr: "", age: 20, notes: "Top prospect stash." },
+  { name: "JJ Wetherholt", pos: "SS", team: "PIT", value: 4, tier: 1, type: "minor", year: 1, maxYears: 3, proj: 350, ecr: "SS8", age: 23, notes: "Elite bat. Impact SS." },
+  { name: "Hunter Goodman", pos: "C", team: "COL", value: 2, tier: 1, type: "minor", year: 1, maxYears: 3, proj: 300, ecr: "C8", age: 25, notes: "Power C upside." },
+  { name: "Daniel Palencia", pos: "SP", team: "CHC", value: 5, tier: 1, type: "minor", year: 1, maxYears: 3, proj: 280, ecr: "SP35", age: 24, notes: "High upside arm." },
+  { name: "Quinn Priester", pos: "SP", team: "PIT", value: 5, tier: 1, type: "minor", year: 1, maxYears: 3, proj: 290, ecr: "SP30", age: 24, notes: "Solid rotation piece." },
+  { name: "Eugenio Suarez", pos: "3B", team: "ARI", value: 13, tier: 1, type: "major", year: 1, maxYears: 2, proj: 400, ecr: "3B8", age: 34, notes: "Reliable power bat." },
+  { name: "Andrew Painter", pos: "SP", team: "PHI", value: 3, tier: 2, type: "minor", year: 1, maxYears: 3, proj: 320, ecr: "SP20", age: 22, notes: "Top pitching prospect." },
+  { name: "Sal Stewart", pos: "3B", team: "CIN", value: 12.5, tier: 2, type: "minor", year: 1, maxYears: 3, proj: 340, ecr: "3B10", age: 21, notes: "Power corner bat." },
 ];
 
 const KEEPER_WATCHLIST = [
@@ -112,6 +138,8 @@ const Icons = {
   ChevDown: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>,
   Alert: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff6b35" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
   Check: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00ff88" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>,
+  Gear: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/></svg>,
+  DollarSign: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>,
 };
 
 // ============================================================
@@ -342,56 +370,87 @@ function KeepersTab() {
         </div>
       </div>
 
-      {/* Locked Keepers */}
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-          <Icons.Lock />
-          <h3 style={{ color: "#e0e6ed", margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: 1 }}>LOCKED KEEPERS</h3>
-        </div>
-        {keepers.map((k, i) => (
-          <div key={i} style={{
-            background: "linear-gradient(135deg, #0d1520, #111b28)",
-            border: k.type === "major" ? "1px solid #00b4ff44" : "1px solid #00ff8833",
-            borderRadius: 10, padding: "14px 16px", marginBottom: 8,
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            transition: "all 0.2s", cursor: "pointer",
-          }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = k.type === "major" ? "#00b4ff88" : "#00ff8888"}
-          onMouseLeave={e => e.currentTarget.style.borderColor = k.type === "major" ? "#00b4ff44" : "#00ff8833"}
-          >
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <span style={{ color: "#e0e6ed", fontWeight: 700, fontSize: 15 }}>{k.name}</span>
-                <span style={{
-                  background: k.type === "major" ? "#00b4ff22" : "#00ff8822",
-                  color: k.type === "major" ? "#00b4ff" : "#00ff88",
-                  fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10, letterSpacing: 0.5,
-                }}>
-                  {k.type === "major" ? "MAJORS" : "MINORS"}
-                </span>
-                <span style={{ color: "#556677", fontSize: 12 }}>Yr {k.year}/{k.maxYears}</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 12, color: "#667788" }}>
-                <span>{k.pos} • {k.team}</span>
-                {k.age && <span>Age: <span style={{ color: "#b8c5d4" }}>{k.age}</span></span>}
-                <span>PROJ: <span style={{ color: "#00b4ff", fontWeight: 600 }}>{k.proj}</span></span>
-                <span>ECR: <span style={{ color: "#b8c5d4" }}>{k.ecr}</span></span>
-              </div>
-              {k.notes && <div style={{ fontSize: 11, color: "#556677", marginTop: 4, fontStyle: "italic" }}>{k.notes}</div>}
-            </div>
-            <button onClick={() => {
-              if (confirm(`Remove ${k.name} from keepers?`)) {
-                setKeepers(prev => prev.filter((_, j) => j !== i));
-              }
-            }} style={{
-              background: "transparent", border: "1px solid #ff4a4a33", borderRadius: 6,
-              color: "#ff4a4a", padding: "4px 8px", cursor: "pointer", fontSize: 11
+      {/* Keepers by Tier */}
+      {(() => {
+        const groups = {};
+        keepers.forEach((k, idx) => {
+          const t = k.tier || 1;
+          if (!groups[t]) groups[t] = [];
+          groups[t].push({ ...k, _idx: idx });
+        });
+        const sorted = Object.entries(groups).sort(([a], [b]) => a - b);
+        const totalKeptVal = keepers.reduce((s, k) => s + (k.value || 0), 0);
+
+        return (
+          <div style={{ marginBottom: 28 }}>
+            {/* Budget Summary */}
+            <div style={{
+              display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 20,
             }}>
-              <Icons.Trash />
-            </button>
+              {[
+                { label: "CAP", val: "$" + AUCTION_CAP, color: "#e0e6ed" },
+                { label: "KEPT", val: "$" + totalKeptVal.toFixed(1), color: "#00b4ff" },
+                { label: "SPENT", val: "$0", color: "#ffaa00" },
+                { label: "LEFT", val: "$" + (AUCTION_CAP - totalKeptVal).toFixed(1), color: (AUCTION_CAP - totalKeptVal) < 20 ? "#ff4a4a" : "#00ff88" },
+              ].map(s => (
+                <div key={s.label} style={{
+                  background: "linear-gradient(135deg, #0d1520, #111b28)",
+                  border: "1px solid #1a2a3a", borderRadius: 8, padding: "8px 6px", textAlign: "center",
+                }}>
+                  <div style={{ color: "#556677", fontSize: 9, fontWeight: 700, letterSpacing: 1 }}>{s.label}</div>
+                  <div style={{ color: s.color, fontSize: 16, fontWeight: 800 }}>{s.val}</div>
+                </div>
+              ))}
+            </div>
+
+            {sorted.map(([tierNum, players]) => {
+              const tierColor = TIER_COLORS[tierNum] || "#8899aa";
+              const tierLabel = TIER_LABELS[tierNum] || ("Tier " + tierNum);
+              const tierTotal = players.reduce((s, p) => s + (p.value || 0), 0);
+
+              return (
+                <div key={tierNum} style={{ marginBottom: 20 }}>
+                  <div style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    marginBottom: 10, padding: "8px 12px",
+                    background: tierColor + "11", borderRadius: 8, border: `1px solid ${tierColor}33`,
+                  }}>
+                    <span style={{ color: tierColor, fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>
+                      {tierLabel.toUpperCase()}
+                    </span>
+                    <span style={{ color: tierColor, fontSize: 13, fontWeight: 600 }}>
+                      {players.length} players • ${tierTotal.toFixed(1)}
+                    </span>
+                  </div>
+
+                  {players.map((k, i) => (
+                    <div key={k._idx} style={{
+                      background: "linear-gradient(135deg, #0d1520, #111b28)",
+                      border: `1px solid ${tierColor}33`,
+                      borderLeft: `3px solid ${tierColor}`,
+                      borderRadius: 10, padding: "12px 16px", marginBottom: 6,
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      transition: "all 0.2s",
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <span style={{ color: tierColor, fontWeight: 800, fontSize: 16, minWidth: 40 }}>
+                            ${(k.value || 0).toFixed(k.value % 1 === 0 ? 0 : 1)}
+                          </span>
+                          <span style={{ color: "#e0e6ed", fontWeight: 700, fontSize: 15 }}>{k.name}</span>
+                          <span style={{ color: "#00b4ff", fontSize: 10, fontWeight: 700, background: "#00b4ff11", padding: "1px 6px", borderRadius: 4 }}>{k.pos}</span>
+                          <span style={{ color: "#556677", fontSize: 11 }}>{k.team}</span>
+                        </div>
+                        {k.notes && <div style={{ fontSize: 11, color: "#556677", marginTop: 2, marginLeft: 48, fontStyle: "italic" }}>{k.notes}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
           </div>
-        ))}
-      </div>
+        );
+      })()}
 
       {/* Keeper Watchlist */}
       <div style={{ marginBottom: 28 }}>
@@ -1369,6 +1428,306 @@ function TradeTab() {
 }
 
 // ============================================================
+// MANAGE TAB — Edit values, remove, add keepers
+// ============================================================
+function ManageTab() {
+  const ctx = useContext(AppCtx);
+  const { keepers, setKeepers } = ctx;
+
+  const [editingIdx, setEditingIdx] = useState(null);
+  const [editValue, setEditValue] = useState("");
+  const [editTier, setEditTier] = useState(1);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addForm, setAddForm] = useState({ name: "", pos: "SP", team: "", value: 0, tier: 1 });
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  const totalKept = keepers.reduce((sum, k) => sum + (k.value || 0), 0);
+  const left = AUCTION_CAP - totalKept;
+
+  const groupedByTier = useMemo(() => {
+    const groups = {};
+    keepers.forEach((k, idx) => {
+      const t = k.tier || 1;
+      if (!groups[t]) groups[t] = [];
+      groups[t].push({ ...k, _idx: idx });
+    });
+    return Object.entries(groups).sort(([a], [b]) => a - b);
+  }, [keepers]);
+
+  const startEdit = (idx) => {
+    setEditingIdx(idx);
+    setEditValue(keepers[idx].value || 0);
+    setEditTier(keepers[idx].tier || 1);
+  };
+
+  const saveEdit = () => {
+    setKeepers(prev => prev.map((k, i) =>
+      i === editingIdx ? { ...k, value: parseFloat(editValue) || 0, tier: parseInt(editTier) } : k
+    ));
+    setEditingIdx(null);
+  };
+
+  const cancelEdit = () => setEditingIdx(null);
+
+  const deleteKeeper = (idx) => {
+    setKeepers(prev => prev.filter((_, i) => i !== idx));
+    setConfirmDelete(null);
+  };
+
+  const addKeeper = () => {
+    if (!addForm.name.trim()) return;
+    setKeepers(prev => [...prev, {
+      name: addForm.name.trim(),
+      pos: addForm.pos,
+      team: addForm.team,
+      value: parseFloat(addForm.value) || 0,
+      tier: parseInt(addForm.tier) || 1,
+      type: "major",
+      year: 1,
+      maxYears: 2,
+      proj: 0,
+      ecr: "",
+      notes: "",
+    }]);
+    setAddForm({ name: "", pos: "SP", team: "", value: 0, tier: 1 });
+    setShowAddForm(false);
+  };
+
+  const inputStyle = {
+    background: "#0d1520", border: "1px solid #1a2a3a", borderRadius: 8,
+    color: "#e0e6ed", padding: "10px 14px", fontSize: 14, outline: "none",
+    width: "100%", boxSizing: "border-box",
+  };
+
+  const labelStyle = {
+    color: "#8899aa", fontSize: 11, fontWeight: 600, letterSpacing: 0.5,
+    marginBottom: 4, display: "block",
+  };
+
+  return (
+    <div>
+      {/* Budget Summary */}
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 24,
+      }}>
+        {[
+          { label: "CAP", value: "$" + AUCTION_CAP, color: "#e0e6ed" },
+          { label: "KEPT", value: "$" + totalKept.toFixed(1), color: "#00b4ff" },
+          { label: "SPENT", value: "$0", color: "#ffaa00" },
+          { label: "LEFT", value: "$" + left.toFixed(1), color: left < 20 ? "#ff4a4a" : "#00ff88" },
+        ].map(s => (
+          <div key={s.label} style={{
+            background: "linear-gradient(135deg, #0d1520, #111b28)",
+            border: "1px solid #1a2a3a", borderRadius: 10, padding: "12px 10px", textAlign: "center",
+          }}>
+            <div style={{ color: "#556677", fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>{s.label}</div>
+            <div style={{ color: s.color, fontSize: 20, fontWeight: 800 }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Section Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Icons.Gear />
+          <h3 style={{ color: "#e0e6ed", margin: 0, fontSize: 16, fontWeight: 700, letterSpacing: 1 }}>MANAGE KEEPERS</h3>
+        </div>
+        <span style={{ color: "#556677", fontSize: 12 }}>{keepers.length} keepers</span>
+      </div>
+
+      {/* Keeper List by Tier */}
+      {groupedByTier.map(([tierNum, players]) => {
+        const tierColor = TIER_COLORS[tierNum] || "#8899aa";
+        const tierLabel = TIER_LABELS[tierNum] || ("Tier " + tierNum);
+        const tierTotal = players.reduce((s, p) => s + (p.value || 0), 0);
+
+        return (
+          <div key={tierNum} style={{ marginBottom: 20 }}>
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              marginBottom: 8, padding: "6px 0",
+            }}>
+              <span style={{ color: tierColor, fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>
+                {tierLabel.toUpperCase()}
+              </span>
+              <span style={{ color: tierColor, fontSize: 12, fontWeight: 600 }}>
+                {players.length} players • ${tierTotal.toFixed(1)}
+              </span>
+            </div>
+
+            {players.map(player => (
+              <div key={player._idx} style={{
+                background: "linear-gradient(135deg, #0d1520, #111b28)",
+                border: `1px solid ${tierColor}33`,
+                borderLeft: `3px solid ${tierColor}`,
+                borderRadius: 10, padding: "12px 16px", marginBottom: 6,
+              }}>
+                {editingIdx === player._idx ? (
+                  /* Edit Mode */
+                  <div>
+                    <div style={{ color: "#e0e6ed", fontWeight: 700, fontSize: 15, marginBottom: 12 }}>
+                      Editing: {player.name}
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                      <div>
+                        <label style={labelStyle}>KEEPER VALUE ($)</label>
+                        <input type="number" step="0.5" value={editValue}
+                          onChange={e => setEditValue(e.target.value)}
+                          style={inputStyle}
+                        />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>TIER</label>
+                        <select value={editTier} onChange={e => setEditTier(e.target.value)}
+                          style={inputStyle}>
+                          {Object.entries(TIER_LABELS).map(([k, v]) => (
+                            <option key={k} value={k}>{v}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={saveEdit} style={{
+                        background: "#00ff8822", border: "1px solid #00ff8844", borderRadius: 8,
+                        color: "#00ff88", padding: "8px 20px", cursor: "pointer", fontSize: 13, fontWeight: 700,
+                      }}>SAVE</button>
+                      <button onClick={cancelEdit} style={{
+                        background: "transparent", border: "1px solid #334455", borderRadius: 8,
+                        color: "#667788", padding: "8px 20px", cursor: "pointer", fontSize: 13,
+                      }}>CANCEL</button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Display Mode */
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                        <span style={{ color: "#e0e6ed", fontWeight: 700, fontSize: 15 }}>{player.name}</span>
+                        <span style={{ color: "#00b4ff", fontSize: 10, fontWeight: 700, background: "#00b4ff11", padding: "1px 6px", borderRadius: 4 }}>{player.pos}</span>
+                        <span style={{ color: "#556677", fontSize: 11 }}>{player.team}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, color: "#667788" }}>
+                        <span style={{ color: tierColor, fontWeight: 700, fontSize: 16 }}>${(player.value || 0).toFixed(1)}</span>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => startEdit(player._idx)} style={{
+                        background: "#00b4ff15", border: "1px solid #00b4ff33", borderRadius: 6,
+                        color: "#00b4ff", padding: "6px 12px", cursor: "pointer", fontSize: 11, fontWeight: 600,
+                        display: "flex", alignItems: "center", gap: 4,
+                      }}>
+                        <Icons.Edit /> EDIT
+                      </button>
+                      {confirmDelete === player._idx ? (
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button onClick={() => deleteKeeper(player._idx)} style={{
+                            background: "#ff4a4a22", border: "1px solid #ff4a4a55", borderRadius: 6,
+                            color: "#ff4a4a", padding: "6px 10px", cursor: "pointer", fontSize: 11, fontWeight: 700,
+                          }}>CONFIRM</button>
+                          <button onClick={() => setConfirmDelete(null)} style={{
+                            background: "transparent", border: "1px solid #334455", borderRadius: 6,
+                            color: "#667788", padding: "6px 8px", cursor: "pointer", fontSize: 11,
+                          }}>NO</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setConfirmDelete(player._idx)} style={{
+                          background: "transparent", border: "1px solid #ff4a4a33", borderRadius: 6,
+                          color: "#ff4a4a", padding: "6px 10px", cursor: "pointer", fontSize: 11,
+                          display: "flex", alignItems: "center", gap: 4,
+                        }}>
+                          <Icons.Trash /> DROP
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      })}
+
+      {/* Add Keeper Button / Form */}
+      {!showAddForm ? (
+        <button onClick={() => setShowAddForm(true)} style={{
+          background: "#00b4ff15", border: "1px dashed #00b4ff44", borderRadius: 12,
+          color: "#00b4ff", padding: "14px 18px", cursor: "pointer", fontSize: 14,
+          fontWeight: 700, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          marginTop: 8,
+        }}>
+          <Icons.Plus /> ADD NEW KEEPER
+        </button>
+      ) : (
+        <div style={{
+          background: "linear-gradient(135deg, #0a111a, #0d1822)",
+          border: "1px solid #00b4ff33", borderRadius: 12, padding: 20, marginTop: 8,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+            <Icons.Plus />
+            <h4 style={{ color: "#e0e6ed", margin: 0, fontSize: 15, fontWeight: 700 }}>ADD NEW KEEPER</h4>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label style={labelStyle}>PLAYER NAME</label>
+              <input placeholder="e.g. Mike Trout" value={addForm.name}
+                onChange={e => setAddForm(prev => ({ ...prev, name: e.target.value }))}
+                style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>POSITION</label>
+              <select value={addForm.pos} onChange={e => setAddForm(prev => ({ ...prev, pos: e.target.value }))}
+                style={inputStyle}>
+                {POSITIONS_LIST.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>TEAM</label>
+              <select value={addForm.team} onChange={e => setAddForm(prev => ({ ...prev, team: e.target.value }))}
+                style={inputStyle}>
+                <option value="">Select...</option>
+                {TEAMS_LIST.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>VALUE ($)</label>
+              <input type="number" step="0.5" min="0" placeholder="0" value={addForm.value || ""}
+                onChange={e => setAddForm(prev => ({ ...prev, value: e.target.value }))}
+                style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>TIER</label>
+              <select value={addForm.tier} onChange={e => setAddForm(prev => ({ ...prev, tier: e.target.value }))}
+                style={inputStyle}>
+                {Object.entries(TIER_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={addKeeper} style={{
+              background: "linear-gradient(135deg, #00b4ff33, #00b4ff22)", border: "1px solid #00b4ff55",
+              borderRadius: 8, color: "#00b4ff", padding: "10px 24px", cursor: "pointer",
+              fontSize: 14, fontWeight: 700, flex: 1,
+            }}>
+              ADD KEEPER
+            </button>
+            <button onClick={() => { setShowAddForm(false); setAddForm({ name: "", pos: "SP", team: "", value: 0, tier: 1 }); }} style={{
+              background: "transparent", border: "1px solid #334455", borderRadius: 8,
+              color: "#667788", padding: "10px 20px", cursor: "pointer", fontSize: 13,
+            }}>
+              CANCEL
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
 // INTEL FEED TAB
 // ============================================================
 function IntelTab() {
@@ -1766,9 +2125,13 @@ window.__FantasyApp = function FantasyCommandCenter() {
   useEffect(() => { if (loaded) saveData(STORAGE_KEYS.keepers, keepers); }, [keepers, loaded]);
   useEffect(() => { if (loaded) saveData(STORAGE_KEYS.keeperWatchlist, keeperWatchlist); }, [keeperWatchlist, loaded]);
 
+  const totalKept = keepers.reduce((sum, k) => sum + (k.value || 0), 0);
+  const budgetLeft = AUCTION_CAP - totalKept;
+
   const tabs = [
     { id: "myteam", label: "My Team", icon: <Icons.Star /> },
     { id: "keepers", label: "Keepers", icon: <Icons.Lock /> },
+    { id: "manage", label: "Manage", icon: <Icons.Gear /> },
     { id: "draft", label: "Draft HQ", icon: <Icons.Trophy /> },
     { id: "roster", label: "Roster", icon: <Icons.Users /> },
     { id: "freeagent", label: "FA Analyzer", icon: <Icons.TrendUp /> },
@@ -1820,6 +2183,26 @@ window.__FantasyApp = function FantasyCommandCenter() {
           </div>
         </div>
 
+        {/* Budget Summary Bar */}
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 16,
+        }}>
+          {[
+            { label: "CAP", val: "$" + AUCTION_CAP, color: "#e0e6ed" },
+            { label: "KEPT", val: "$" + totalKept.toFixed(1), color: "#00b4ff" },
+            { label: "SPENT", val: "$0", color: "#ffaa00" },
+            { label: "LEFT", val: "$" + budgetLeft.toFixed(1), color: budgetLeft < 20 ? "#ff4a4a" : "#00ff88" },
+          ].map(s => (
+            <div key={s.label} style={{
+              background: "linear-gradient(135deg, #0d1520, #111b28)",
+              border: "1px solid #1a2a3a", borderRadius: 8, padding: "8px 6px", textAlign: "center",
+            }}>
+              <div style={{ color: "#556677", fontSize: 9, fontWeight: 700, letterSpacing: 1 }}>{s.label}</div>
+              <div style={{ color: s.color, fontSize: 16, fontWeight: 800 }}>{s.val}</div>
+            </div>
+          ))}
+        </div>
+
         {/* Tab Navigation */}
         <div style={{
           display: "flex", gap: 2, marginBottom: 24,
@@ -1845,6 +2228,7 @@ window.__FantasyApp = function FantasyCommandCenter() {
         <div style={{ paddingBottom: 40 }}>
           {activeTab === "myteam" && <MyTeamTab />}
           {activeTab === "keepers" && <KeepersTab />}
+          {activeTab === "manage" && <ManageTab />}
           {activeTab === "draft" && <DraftTab />}
           {activeTab === "roster" && <RosterTab />}
           {activeTab === "freeagent" && <FreeAgentTab />}
