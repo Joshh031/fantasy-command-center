@@ -1431,10 +1431,6 @@ function IntelTab() {
       }
 
       // Cross-reference with local data to correct hallucinations
-      const localMatch = [...keepers, ...keeperWatchlist, ...roster].find(
-        p => p.name.toLowerCase().includes(searchName.trim().toLowerCase()) || 
-             searchName.trim().toLowerCase().includes(p.name.toLowerCase())
-      );
       if (localMatch && parsed) {
         if (localMatch.pos) parsed.pos = localMatch.pos;
         if (localMatch.age) parsed.age = localMatch.age;

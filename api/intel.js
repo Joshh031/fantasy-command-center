@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     // Build context hint if local player data was provided
     let contextHint = "";
     if (playerContext && playerContext.pos && playerContext.team) {
-      contextHint = `\n\nIMPORTANT PLAYER IDENTITY: This is ${playerContext.name || playerName}, who plays ${playerContext.pos} for ${playerContext.team}${playerContext.age ? ` (age ${playerContext.age})` : ""}. Make sure your analysis is specifically about THIS player at THIS position on THIS team. Do not confuse with other players who share a similar name.`;
+      contextHint = `\n\nCRITICAL PLAYER IDENTITY — YOU MUST USE THIS INFO:\n- Name: ${playerContext.name || playerName}\n- Position: ${playerContext.pos}\n- Team: ${playerContext.team}${playerContext.age ? `\n- Age: ${playerContext.age}` : ""}\nYour entire analysis MUST be about this specific ${playerContext.pos} for ${playerContext.team}. Do NOT confuse with any other player. The strategic analysis must reference ${playerContext.team} and the ${playerContext.pos} position. If you are unsure about this player's stats, say so rather than substituting another player's information.`;
     }
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 2000,
-        system: "You are an elite fantasy baseball analyst with deep expertise in points leagues. You must respond ONLY with valid JSON, no other text. Current date is " + new Date().toISOString().split('T')[0] + ".",
+        system: "You are an elite fantasy baseball analyst with deep expertise in points leagues. You must respond ONLY with valid JSON, no other text. CRITICAL: When player identity context is provided, your analysis MUST be about that exact player, position, and team. Never substitute or conflate with a different player. If uncertain about a player's stats, acknowledge uncertainty rather than hallucinating stats from another player. Current date is " + new Date().toISOString().split('T')[0] + ".",
         messages: [{
           role: "user",
           content: `Provide a comprehensive 2026 fantasy baseball analysis for "${playerName}".${contextHint}
