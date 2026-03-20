@@ -1,6 +1,7 @@
 {
   "rewrites": [
     { "source": "/api/intel", "destination": "/api/intel" },
+    { "source": "/coffee", "destination": "/coffee.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
