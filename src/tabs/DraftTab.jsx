@@ -540,6 +540,7 @@ export default function DraftTab() {
   const {
     keepers,
     roster,
+    setRoster,
     draftPool,
     setDraftPool,
     draftPick,
@@ -615,6 +616,11 @@ export default function DraftTab() {
 
   const handleDraftMe = (player) => {
     handleDraft(player, "ME");
+    // Add to roster immediately
+    setRoster((prev) => {
+      if (prev.some((r) => r.name === player.name)) return prev;
+      return [...prev, { name: player.name, pos: player.pos, team: player.team, proj: player.leagueFpts || player.cbsFpts || 0 }];
+    });
   };
 
   const handleDraftOff = (player) => {
@@ -625,6 +631,11 @@ export default function DraftTab() {
   };
 
   const handleUndo = (playerName) => {
+    // Check if this was drafted by ME to remove from roster
+    const entry = draftPool.find((p) => p.name === playerName);
+    if (entry?.draftedBy === "ME") {
+      setRoster((prev) => prev.filter((r) => r.name !== playerName));
+    }
     setDraftPool((prev) =>
       prev.map((p) => (p.name === playerName ? { ...p, drafted: false, draftedBy: null } : p))
     );
@@ -715,6 +726,77 @@ export default function DraftTab() {
         intelCache={intelCache}
         onDraft={handleDraftMe}
       />
+
+      {/* Section 2b: Top 10 Best Available (position-agnostic) */}
+      <div style={sectionStyle}>
+        <div style={headerStyle}>
+          <Icons.TrendUp /> Top 10 Best Available
+        </div>
+        <div style={{ display: "grid", gap: 4 }}>
+          {allPlayers
+            .filter((p) => !draftedSet[p.name])
+            .sort((a, b) => {
+              const adjA = (a.leagueFpts || 0) + (draftAdjustments[a.name] || 0);
+              const adjB = (b.leagueFpts || 0) + (draftAdjustments[b.name] || 0);
+              return adjB - adjA;
+            })
+            .slice(0, 10)
+            .map((p, i) => {
+              const adj = draftAdjustments[p.name] || 0;
+              const adjFpts = (p.leagueFpts || 0) + adj;
+              const flag = draftFlags[p.name];
+              const flagColor = flag ? FLAG_TYPES[flag]?.color : null;
+              const intel = intelCache[p.name?.toLowerCase()];
+              return (
+                <div
+                  key={`top10-${p.name}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "6px 10px",
+                    borderRadius: 6,
+                    background: i === 0 ? `${COLORS.green}08` : "transparent",
+                    borderBottom: `1px solid ${COLORS.muted}15`,
+                  }}
+                >
+                  <span style={{ color: i < 3 ? COLORS.green : COLORS.amber, fontFamily: mono, fontWeight: 800, fontSize: 12, minWidth: 24 }}>
+                    #{i + 1}
+                  </span>
+                  {flagColor && (
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: flagColor, flexShrink: 0 }} />
+                  )}
+                  <span style={{ color: COLORS.text, fontWeight: 600, fontSize: 13, flex: 1 }}>{p.name}</span>
+                  <span style={{ color: COLORS.primary, fontSize: 10, fontWeight: 600 }}>{p.pos}</span>
+                  <span style={{ color: COLORS.muted, fontSize: 10 }}>{p.team}</span>
+                  {intel && (
+                    <span style={{
+                      color: intel.verdict === "RISER" ? COLORS.green : intel.verdict === "FALLER" ? COLORS.danger : COLORS.amber,
+                      fontSize: 9, fontWeight: 700,
+                    }}>
+                      {intel.verdict === "RISER" ? "▲" : intel.verdict === "FALLER" ? "▼" : "—"}
+                    </span>
+                  )}
+                  <span style={{ color: COLORS.primary, fontFamily: mono, fontWeight: 700, fontSize: 13 }}>
+                    {adjFpts.toFixed(1)}
+                  </span>
+                  <button
+                    onClick={() => handleDraftMe(p)}
+                    style={{ ...btnBase, background: COLORS.green, color: COLORS.bgDark }}
+                  >
+                    DRAFT
+                  </button>
+                  <button
+                    onClick={() => handleDraftOff(p)}
+                    style={{ ...btnBase, background: COLORS.warning, color: "#fff" }}
+                  >
+                    OFF
+                  </button>
+                </div>
+              );
+            })}
+        </div>
+      </div>
 
       {/* Section 3: Strategy Advisor */}
       <StrategyAdvisor
