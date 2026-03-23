@@ -3,13 +3,13 @@ import { getDatabase, ref, set, onValue } from "firebase/database";
 import { getAuth, signInAnonymously } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBEFzIjmRcAtBnRY_H9iV_1WcaF_hMvH2g",
-  authDomain: "familyhub-d72f8.firebaseapp.com",
-  databaseURL: "https://familyhub-d72f8-default-rtdb.firebaseio.com",
-  projectId: "familyhub-d72f8",
-  storageBucket: "familyhub-d72f8.appspot.com",
-  messagingSenderId: "674695614112",
-  appId: "1:674695614112:web:3f2d8bce8f5c4bde12e75d",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);
