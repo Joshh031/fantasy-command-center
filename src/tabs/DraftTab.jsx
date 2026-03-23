@@ -860,7 +860,7 @@ export default function DraftTab() {
 
             return (
               <div
-                key={p.name}
+                key={`${p.name}-${p.pos}-${p.team}`}
                 style={{
                   display: "flex",
                   alignItems: "center",
