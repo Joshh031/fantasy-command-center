@@ -1,4 +1,6 @@
 {
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "rewrites": [
     { "source": "/api/intel", "destination": "/api/intel" },
     { "source": "/(.*)", "destination": "/index.html" }
