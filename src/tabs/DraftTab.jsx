@@ -967,65 +967,41 @@ export default function DraftTab() {
                   }}
                 />
 
-                {/* CBS rank */}
-                <span
-                  style={{
-                    fontFamily: mono,
-                    fontSize: 10,
-                    color: COLORS.muted,
-                    width: 28,
-                    textAlign: "right",
-                    flexShrink: 0,
-                  }}
-                >
-                  #{p.cbsRank}
-                </span>
-
-                {/* Name */}
-                <span
-                  style={{
-                    color: COLORS.text,
-                    fontWeight: 600,
-                    fontSize: 13,
-                    flex: 1,
-                    minWidth: 0,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    textDecoration: p.isDrafted ? "line-through" : "none",
-                  }}
-                >
-                  {p.name}
-                </span>
-
-                {/* Position badge */}
-                <span
-                  style={{
-                    background: `${COLORS.primary}22`,
-                    color: COLORS.primary,
-                    borderRadius: 4,
-                    padding: "1px 6px",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    fontFamily: mono,
-                    flexShrink: 0,
-                  }}
-                >
-                  {p.pos}
-                </span>
-
-                {/* Team */}
-                <span
-                  style={{
-                    color: COLORS.muted,
-                    fontSize: 11,
-                    width: 32,
-                    textAlign: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  {p.team}
-                </span>
+                {/* Name + pos + team stacked on mobile */}
+                <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span
+                      style={{
+                        color: COLORS.text,
+                        fontWeight: 600,
+                        fontSize: 13,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        textDecoration: p.isDrafted ? "line-through" : "none",
+                      }}
+                    >
+                      {p.name}
+                    </span>
+                    {p.isDrafted && (
+                      <span style={{ color: COLORS.warning, fontSize: 9, fontWeight: 700, flexShrink: 0 }}>
+                        → {p.draftedBy}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 1, flexWrap: "wrap" }}>
+                    <span style={{ background: `${COLORS.primary}22`, color: COLORS.primary, borderRadius: 3, padding: "0px 4px", fontSize: 9, fontWeight: 700, fontFamily: mono }}>{p.pos}</span>
+                    <span style={{ color: COLORS.muted, fontSize: 9 }}>{p.team}</span>
+                    <span style={{ color: COLORS.muted, fontSize: 9, fontFamily: mono }}>#{p.cbsRank}</span>
+                    {intel && (
+                      <span style={{ fontSize: 9, fontWeight: 700, color: intel === "riser" ? COLORS.green : intel === "faller" ? COLORS.danger : COLORS.amber }}>
+                        {intel === "riser" ? "▲" : intel === "faller" ? "▼" : "—"}
+                      </span>
+                    )}
+                    {highK && <span style={{ color: COLORS.danger, fontSize: 8, fontWeight: 700 }}>⚠K</span>}
+                    {twoStart && <span style={{ color: COLORS.green, fontSize: 8, fontWeight: 700 }}>2SP</span>}
+                  </div>
+                </div>
 
                 {/* League FPTS (adjusted) */}
                 <span
@@ -1034,112 +1010,12 @@ export default function DraftTab() {
                     fontWeight: 700,
                     fontFamily: mono,
                     fontSize: 13,
-                    width: 55,
                     textAlign: "right",
                     flexShrink: 0,
                   }}
                 >
                   {p.adjustedFpts.toFixed(1)}
                 </span>
-
-                {/* CBS FPTS */}
-                <span
-                  style={{
-                    color: COLORS.muted,
-                    fontFamily: mono,
-                    fontSize: 11,
-                    width: 50,
-                    textAlign: "right",
-                    flexShrink: 0,
-                  }}
-                >
-                  {p.cbsFpts.toFixed(1)}
-                </span>
-
-                {/* Adjustment input */}
-                <input
-                  type="number"
-                  placeholder="+/-"
-                  value={adj || ""}
-                  onChange={(e) => setAdjustment(p.name, e.target.value)}
-                  style={{
-                    background: COLORS.bgDark,
-                    color: adj > 0 ? COLORS.green : adj < 0 ? COLORS.danger : COLORS.text,
-                    border: `1px solid ${COLORS.muted}33`,
-                    borderRadius: 4,
-                    padding: "3px 4px",
-                    fontFamily: mono,
-                    fontSize: 11,
-                    width: 48,
-                    textAlign: "center",
-                    outline: "none",
-                    flexShrink: 0,
-                  }}
-                />
-
-                {/* Intel badge */}
-                {intel && (
-                  <span
-                    style={{
-                      fontSize: 9,
-                      fontWeight: 700,
-                      flexShrink: 0,
-                      color:
-                        intel === "riser"
-                          ? COLORS.green
-                          : intel === "faller"
-                          ? COLORS.danger
-                          : COLORS.amber,
-                    }}
-                  >
-                    {intel === "riser"
-                      ? "\u25B2"
-                      : intel === "faller"
-                      ? "\u25BC"
-                      : "\u2014"}
-                  </span>
-                )}
-
-                {/* K-rate warning */}
-                {highK && (
-                  <span
-                    title={`${p.stats.K} K (${(p.stats.K * -1).toFixed(0)} FPTS)`}
-                    style={{ fontSize: 12, flexShrink: 0, cursor: "help" }}
-                  >
-                    <Icons.Alert />
-                  </span>
-                )}
-
-                {/* 2-start badge */}
-                {twoStart && (
-                  <span
-                    style={{
-                      background: `${COLORS.green}22`,
-                      color: COLORS.green,
-                      fontSize: 9,
-                      fontWeight: 700,
-                      borderRadius: 3,
-                      padding: "1px 4px",
-                      flexShrink: 0,
-                    }}
-                  >
-                    2SP
-                  </span>
-                )}
-
-                {/* Drafted by indicator */}
-                {p.isDrafted && (
-                  <span
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: p.draftedBy === "ME" ? COLORS.green : COLORS.warning,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {p.draftedBy}
-                  </span>
-                )}
 
                 {/* Action buttons */}
                 {!p.isDrafted ? (
