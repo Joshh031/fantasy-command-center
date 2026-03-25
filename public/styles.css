@@ -1,0 +1,316 @@
+/* ============================================================
+   Fantasy Command Center — Draft Suite
+   Dark carbon fiber theme with electric blue accents
+   ============================================================ */
+
+/* --- Reset & Base --- */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-base:    #060a10;
+  --bg-surface: #0d1520;
+  --bg-card:    #111b28;
+  --bg-input:   #0a111a;
+  --border:     #1a2a3a;
+  --border-dim: #1a1a2a;
+  --text:       #e0e6ed;
+  --text-muted: #556677;
+  --text-dim:   #334455;
+  --blue:       #00b4ff;
+  --blue-dim:   #00b4ff22;
+  --green:      #00ff88;
+  --green-dim:  #00ff8822;
+  --amber:      #ffaa00;
+  --amber-dim:  #ffaa0022;
+  --orange:     #ff6b35;
+  --orange-dim: #ff6b3522;
+  --red:        #ff4a4a;
+  --red-dim:    #ff4a4a22;
+  --purple:     #9966ff;
+  --purple-dim: #9966ff22;
+  --gold:       #ffd700;
+  --mono:       'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  --sans:       'Geist', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  --radius:     8px;
+  --radius-lg:  12px;
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--text);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+#root { min-height: 100vh; }
+
+/* --- Carbon Fiber Texture --- */
+.carbon-overlay {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 2px, #ffffff01 2px, #ffffff01 4px),
+    repeating-linear-gradient(90deg, transparent, transparent 2px, #ffffff01 2px, #ffffff01 4px);
+  background-size: 4px 4px;
+}
+
+/* --- Layout --- */
+.app-shell {
+  position: relative; z-index: 1;
+  max-width: 960px; margin: 0 auto; padding: 0 16px;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at 20% 50%, #001a3311 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, #00b4ff06 0%, transparent 40%),
+    linear-gradient(180deg, var(--bg-base) 0%, #0a0f18 50%, var(--bg-base) 100%);
+}
+
+.app-header { padding: 24px 0 16px; text-align: center; }
+.app-header .league-tag {
+  font-size: 11px; font-weight: 700; letter-spacing: 4px;
+  color: var(--blue); text-transform: uppercase; margin-bottom: 6px;
+}
+.app-header h1 {
+  font-size: 28px; font-weight: 800; letter-spacing: -0.5px;
+  background: linear-gradient(135deg, var(--text) 0%, var(--blue) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.app-header .team-tag { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+
+/* --- Budget Bar --- */
+.budget-bar {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 6px; margin-bottom: 16px;
+}
+.budget-cell {
+  background: linear-gradient(135deg, var(--bg-surface), var(--bg-card));
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 8px 6px; text-align: center;
+}
+.budget-cell .label {
+  font-size: 9px; font-weight: 700; letter-spacing: 1px;
+  color: var(--text-muted);
+}
+.budget-cell .value { font-size: 16px; font-weight: 800; font-family: var(--mono); }
+
+/* --- Tab Nav --- */
+.tab-nav {
+  display: flex; gap: 2px; margin-bottom: 24px;
+  background: #0a0f18; border-radius: var(--radius-lg);
+  padding: 4px; border: 1px solid var(--border); overflow-x: auto;
+}
+.tab-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 12px; border-radius: 10px; border: none; cursor: pointer;
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+  font-family: var(--sans);
+  background: transparent; color: var(--text-muted);
+  transition: all 0.2s;
+}
+.tab-btn.active {
+  background: linear-gradient(135deg, var(--blue-dim), #00b4ff11);
+  color: var(--blue);
+}
+
+/* --- Cards / Sections --- */
+.card {
+  background: linear-gradient(135deg, var(--bg-surface), var(--bg-card));
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 16px; margin-bottom: 16px;
+}
+.card-header {
+  font-size: 14px; font-weight: 700; letter-spacing: 1px;
+  color: var(--blue); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.card-header .icon { font-size: 16px; }
+
+/* --- Section Header (collapsible) --- */
+.section-toggle {
+  cursor: pointer; user-select: none;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 700; color: var(--amber);
+  margin: 16px 0 8px;
+}
+.section-toggle .chevron {
+  margin-left: auto; font-size: 12px; color: var(--text-muted);
+  transition: transform 0.2s;
+}
+.section-toggle .chevron.open { transform: rotate(180deg); }
+
+/* --- Buttons --- */
+.btn {
+  border: none; border-radius: 6px; cursor: pointer;
+  font-family: var(--mono); font-weight: 600; font-size: 11px;
+  padding: 4px 10px; transition: opacity 0.15s;
+}
+.btn:hover { opacity: 0.85; }
+.btn-green  { background: var(--green);  color: var(--bg-base); }
+.btn-orange { background: var(--orange); color: #fff; }
+.btn-red    { background: var(--red);    color: #fff; }
+.btn-blue   { background: var(--blue);   color: var(--bg-base); }
+.btn-muted  { background: #33445533;     color: var(--text-muted); }
+.btn-ghost  { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+
+.btn-lg { font-size: 12px; padding: 8px 16px; border-radius: var(--radius); }
+.btn-sm { font-size: 10px; padding: 3px 8px; }
+
+/* --- Inputs --- */
+.input, .select {
+  background: var(--bg-input); color: var(--text);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 12px; font-size: 12px; font-family: var(--sans);
+  outline: none; transition: border-color 0.2s;
+}
+.input:focus, .select:focus { border-color: var(--blue); }
+.input-mono { font-family: var(--mono); }
+.input-sm { padding: 4px 8px; font-size: 11px; width: 52px; text-align: center; }
+.textarea {
+  background: var(--bg-input); color: var(--text);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 12px; font-size: 12px; font-family: var(--mono);
+  outline: none; resize: vertical; width: 100%;
+}
+
+/* --- Badges --- */
+.badge {
+  display: inline-block; border-radius: 4px;
+  padding: 2px 6px; font-size: 10px; font-weight: 700;
+  font-family: var(--mono);
+}
+.badge-blue   { background: var(--blue-dim);   color: var(--blue); }
+.badge-green  { background: var(--green-dim);  color: var(--green); }
+.badge-amber  { background: var(--amber-dim);  color: var(--amber); }
+.badge-orange { background: var(--orange-dim); color: var(--orange); }
+.badge-red    { background: var(--red-dim);    color: var(--red); }
+.badge-purple { background: var(--purple-dim); color: var(--purple); }
+
+/* --- Flag Dot --- */
+.flag-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  cursor: pointer; flex-shrink: 0;
+  border: 1px solid var(--text-dim);
+}
+.flag-dot.sleeper    { background: var(--green);  border-color: transparent; }
+.flag-dot.overvalued { background: var(--orange); border-color: transparent; }
+.flag-dot.target     { background: var(--blue);   border-color: transparent; }
+.flag-dot.mustDraft  { background: var(--amber);  border-color: transparent; }
+
+/* --- Player Row --- */
+.player-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px; border-bottom: 1px solid #1a2a3a15;
+  transition: opacity 0.2s;
+}
+.player-row.drafted { opacity: 0.4; }
+.player-name {
+  color: var(--text); font-weight: 600; font-size: 13px;
+  flex: 1; min-width: 0; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.player-name.struck { text-decoration: line-through; color: var(--text-muted); }
+
+/* --- Keeper Row --- */
+.keeper-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; margin-bottom: 6px;
+  background: linear-gradient(135deg, var(--bg-surface), var(--bg-card));
+  border: 1px solid var(--border); border-radius: var(--radius);
+}
+
+/* --- Pool Stats --- */
+.pool-stats {
+  display: flex; gap: 16px; font-size: 12px;
+  color: var(--text-muted); margin-bottom: 12px;
+}
+.pool-stats .count { font-weight: 700; font-family: var(--mono); }
+
+/* --- Filter Bar --- */
+.filter-bar {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  align-items: center; margin-bottom: 12px;
+}
+
+/* --- Grid --- */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.flex-row { display: flex; align-items: center; gap: 8px; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-1 { flex: 1; }
+.gap-4  { gap: 4px; }
+.gap-6  { gap: 6px; }
+.gap-8  { gap: 8px; }
+.gap-12 { gap: 12px; }
+.mb-8  { margin-bottom: 8px; }
+.mb-12 { margin-bottom: 12px; }
+.mb-16 { margin-bottom: 16px; }
+.mt-8  { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+
+/* --- Scrollable --- */
+.scroll-y { overflow-y: auto; overflow-x: hidden; }
+.max-h-400 { max-height: 400px; }
+.max-h-500 { max-height: 500px; }
+.max-h-600 { max-height: 600px; }
+
+/* --- Nomination Card --- */
+.nom-card {
+  background: linear-gradient(135deg, #001a2a, var(--bg-surface));
+  border: 1px solid var(--blue); border-radius: var(--radius-lg);
+  padding: 20px; margin-bottom: 16px;
+}
+.nom-card .player-big {
+  font-size: 20px; font-weight: 800; color: var(--text);
+}
+.nom-card .bid-guide {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 8px; margin-top: 12px;
+}
+.bid-cell {
+  text-align: center; padding: 8px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.bid-cell .label { font-size: 9px; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; }
+.bid-cell .value { font-size: 18px; font-weight: 800; font-family: var(--mono); }
+
+/* --- Snake Pick Chip --- */
+.pick-chip {
+  border-radius: 6px; padding: 6px 10px; text-align: center; min-width: 64px;
+}
+.pick-chip .round { font-size: 10px; font-weight: 600; color: var(--text-muted); }
+.pick-chip .overall { font-family: var(--mono); font-weight: 700; font-size: 15px; color: var(--text); }
+
+/* --- Table Row --- */
+.table-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 5px 8px; border-bottom: 1px solid #1a2a3a15;
+  font-size: 12px;
+}
+.table-header {
+  font-weight: 700; color: var(--text-muted); font-size: 10px;
+  border-bottom: 1px solid #1a2a3a33;
+}
+
+/* --- Responsive --- */
+@media (max-width: 640px) {
+  .app-header h1 { font-size: 22px; }
+  .budget-bar { grid-template-columns: repeat(2, 1fr); }
+  .nom-card .bid-guide { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr; }
+  .tab-btn { font-size: 10px; padding: 8px 6px; }
+}
+
+/* --- Animations --- */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fadeIn 0.2s ease-out; }
+
+/* --- Toast --- */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--bg-card); border: 1px solid var(--blue);
+  border-radius: var(--radius); padding: 10px 20px;
+  font-size: 13px; font-weight: 600; color: var(--blue);
+  z-index: 100; animation: fadeIn 0.2s ease-out;
+  pointer-events: none;
+}
