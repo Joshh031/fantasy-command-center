@@ -4,6 +4,7 @@ import { LEAGUE_SIZE, POS_TARGETS, FLAG_TYPES, BATTING_SCORING, PITCHING_SCORING
 import * as Icons from "../icons.jsx";
 import battersData from "../data/batters.json";
 import pitchersData from "../data/pitchers.json";
+import { getResearchFlag } from "../data/researchFlags.js";
 
 const COLORS = {
   primary: "#3b82f6",
@@ -21,7 +22,26 @@ const COLORS = {
 const mono = "'JetBrains Mono', monospace";
 
 const ALL_POSITIONS = ["ALL", "C", "1B", "2B", "3B", "SS", "OF", "DH", "SP", "RP"];
-const FLAG_CYCLE = ["none", "sleeper", "overvalued", "target", "mustDraft", "none"];
+
+function researchBadgeColor(type) {
+  if (type === "sleeper") return COLORS.green;
+  if (type === "bust") return COLORS.danger;
+  if (type === "polarizing") return COLORS.purple;
+  return COLORS.muted;
+}
+function researchBadgeIcon(type) {
+  if (type === "sleeper") return "💤 SLEEPER";
+  if (type === "bust") return "⚠ BUST";
+  if (type === "polarizing") return "⚡ POLARIZING";
+  return "";
+}
+function researchBadgeIconShort(type) {
+  if (type === "sleeper") return "💤";
+  if (type === "bust") return "⚠";
+  if (type === "polarizing") return "⚡";
+  return "";
+}
+const FLAG_CYCLE = ["none", "sleeper", "bust", "overvalued", "target", "mustDraft", "none"];
 
 const sectionStyle = {
   background: COLORS.surface,
@@ -250,6 +270,27 @@ function DraftOptimizer({ allPlayers, draftedSet, positionCounts, draftAdjustmen
                         : "\u2014 HOLD"}
                     </span>
                   )}
+                  {(() => {
+                    const rf = getResearchFlag(p.name);
+                    if (!rf) return null;
+                    const c = researchBadgeColor(rf.type);
+                    return (
+                      <span
+                        title={rf.note}
+                        style={{
+                          fontSize: 8,
+                          fontWeight: 700,
+                          padding: "1px 4px",
+                          borderRadius: 3,
+                          background: `${c}22`,
+                          color: c,
+                          cursor: "help",
+                        }}
+                      >
+                        {researchBadgeIconShort(rf.type)}
+                      </span>
+                    );
+                  })()}
                   <button
                     onClick={() => onDraft(p, "ME")}
                     style={{
@@ -691,7 +732,13 @@ export default function DraftTab() {
     if (hideDrafted) {
       pool = pool.filter((p) => !p.isDrafted);
     }
-    if (flagFilter !== "all") {
+    if (flagFilter === "research-sleeper") {
+      pool = pool.filter((p) => { const t = getResearchFlag(p.name)?.type; return t === "sleeper" || t === "polarizing"; });
+    } else if (flagFilter === "research-bust") {
+      pool = pool.filter((p) => { const t = getResearchFlag(p.name)?.type; return t === "bust" || t === "polarizing"; });
+    } else if (flagFilter === "research-polarizing") {
+      pool = pool.filter((p) => getResearchFlag(p.name)?.type === "polarizing");
+    } else if (flagFilter !== "all") {
       pool = pool.filter((p) => p.flag === flagFilter);
     }
 
@@ -777,6 +824,27 @@ export default function DraftTab() {
                       {intel.verdict === "RISER" ? "▲" : intel.verdict === "FALLER" ? "▼" : "—"}
                     </span>
                   )}
+                  {(() => {
+                    const rf = getResearchFlag(p.name);
+                    if (!rf) return null;
+                    const c = researchBadgeColor(rf.type);
+                    return (
+                      <span
+                        title={rf.note}
+                        style={{
+                          fontSize: 8,
+                          fontWeight: 700,
+                          padding: "1px 4px",
+                          borderRadius: 3,
+                          background: `${c}22`,
+                          color: c,
+                          cursor: "help",
+                        }}
+                      >
+                        {researchBadgeIconShort(rf.type)}
+                      </span>
+                    );
+                  })()}
                   <span style={{ color: COLORS.primary, fontFamily: mono, fontWeight: 700, fontSize: 13 }}>
                     {adjFpts.toFixed(1)}
                   </span>
@@ -897,6 +965,9 @@ export default function DraftTab() {
             }}
           >
             <option value="all">All Flags</option>
+            <option value="research-sleeper">💤 Research Sleepers</option>
+            <option value="research-bust">⚠ Research Busts</option>
+            <option value="research-polarizing">⚡ Polarizing</option>
             {Object.entries(FLAG_TYPES)
               .filter(([k]) => k !== "none")
               .map(([k, v]) => (
@@ -1000,6 +1071,27 @@ export default function DraftTab() {
                     )}
                     {highK && <span style={{ color: COLORS.danger, fontSize: 8, fontWeight: 700 }}>⚠K</span>}
                     {twoStart && <span style={{ color: COLORS.green, fontSize: 8, fontWeight: 700 }}>2SP</span>}
+                    {(() => {
+                      const rf = getResearchFlag(p.name);
+                      if (!rf) return null;
+                      const c = researchBadgeColor(rf.type);
+                      return (
+                        <span
+                          title={rf.note}
+                          style={{
+                            fontSize: 8,
+                            fontWeight: 700,
+                            padding: "1px 4px",
+                            borderRadius: 3,
+                            background: `${c}22`,
+                            color: c,
+                            cursor: "help",
+                          }}
+                        >
+                          {researchBadgeIcon(rf.type)}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
 

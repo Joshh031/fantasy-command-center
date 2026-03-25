@@ -65,6 +65,7 @@ export const STORAGE_KEYS = {
 export const FLAG_TYPES = {
   none: { label: "—", color: "transparent" },
   sleeper: { label: "SLEEPER", color: "#00ff88" },
+  bust: { label: "BUST RISK", color: "#ff4a4a" },
   overvalued: { label: "OVERVALUED", color: "#ff6b35" },
   target: { label: "TARGET", color: "#3b82f6" },
   mustDraft: { label: "MUST DRAFT", color: "#ffaa00" },
