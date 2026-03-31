@@ -146,7 +146,16 @@ textarea.ni::placeholder{color:var(--dim)}
 .mcard-acts{display:flex;gap:3px;flex-shrink:0}
 .mab{background:none;border:1px solid var(--bd);border-radius:4px;color:var(--muted);font-size:11px;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .mab:active{border-color:var(--prot);color:var(--prot)}.mab.del:active{border-color:var(--warn);color:var(--warn)}
-.mcard-macros{display:flex;gap:9px;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)}
+.mcard-macros{display:flex;gap:9px;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd);cursor:pointer}
+.mcard-pcts{display:none;gap:6px;margin-top:6px;flex-wrap:wrap}
+.mcard-pcts.on{display:flex}
+.mpct{font-family:var(--mono);font-size:9px;color:var(--muted)}
+.mpct .mpv{font-weight:600}
+.mpct.cal .mpv{color:var(--cal)}.mpct.prot .mpv{color:var(--prot)}.mpct.carb .mpv{color:var(--carb)}.mpct.fat .mpv{color:var(--fat)}.mpct.fiber .mpv{color:var(--fiber)}
+.mpct.warn .mpv{color:var(--warn)}
+.mcard-macros .mm-bar{height:2px;background:var(--sur2);border-radius:1px;margin-top:2px;overflow:hidden}
+.mcard-macros .mm-fill{height:100%;border-radius:1px}
+.mm.cal .mm-fill{background:var(--cal)}.mm.prot .mm-fill{background:var(--prot)}.mm.carb .mm-fill{background:var(--carb)}.mm.fat .mm-fill{background:var(--fat)}.mm.fiber .mm-fill{background:var(--fiber)}
 .mm{display:flex;flex-direction:column}
 .mmv{font-family:var(--mono);font-size:11px;font-weight:700}
 .mml{font-family:var(--mono);font-size:7px;color:var(--dim)}
@@ -801,10 +810,22 @@ if(fatPct>=50)return'<span class="mflag fat-heavy">FAT HEAVY</span>';
 if(carbCal>protCal*2.5&&(m.carb||0)>30)return'<span class="mflag carb-heavy">CARB HEAVY</span>';
 return'';
 }
+function mealPcts(m){
+const cp=T.cal?Math.round(m.cal/T.cal*100):0;
+const pp=T.prot?Math.round(m.prot/T.prot*100):0;
+const carbp=T.carb?Math.round((m.carb||0)/T.carb*100):0;
+const fp=T.fat?Math.round(m.fat/T.fat*100):0;
+const fip=T.fiber?Math.round(m.fiber/T.fiber*100):0;
+// Flag worst offender: macro that uses disproportionately more % than calories %
+const diffs={prot:pp-cp,carb:carbp-cp,fat:fp-cp,fiber:fip-cp};
+let worst=null,worstVal=15;
+for(const[k,v]of Object.entries(diffs)){if(v>worstVal){worst=k;worstVal=v;}}
+return{cp,pp,carbp,fp,fip,worst};
+}
 function renderMeals(){
 const el=document.getElementById('meals-list');
 if(!S.meals.length){el.innerHTML='<div class="empty"><div class="ei">\ud83c\udf7d</div>No meals yet.</div>';return;}
-el.innerHTML=[...S.meals].reverse().map(m=>` <div class="mcard"> <div class="mcard-top"> <span class="mbadge ${m.type}">${m.type}</span>${mealFlag(m)} <div class="mcard-body"> <div class="mcard-desc">${esc(m.desc)}</div> ${m.notes?`<div class="mcard-note">${esc(m.notes)}</div>`:''} <div class="mcard-time">${m.time||''}</div> </div> <div class="mcard-acts"> <button class="mab" onclick="openEditModal(${m.id})" title="Edit">\u270f\ufe0f</button> <button class="mab del" onclick="deleteMeal(${m.id})" title="Delete">\u2715</button> </div> </div> <div class="mcard-macros"> <div class="mm cal"><div class="mmv">${m.cal}</div><div class="mml">kcal</div></div> <div class="mm prot"><div class="mmv">${m.prot}g</div><div class="mml">prot</div></div> <div class="mm carb"><div class="mmv">${m.carb||0}g</div><div class="mml">carb</div></div> <div class="mm fat"><div class="mmv">${m.fat}g</div><div class="mml">fat</div></div> <div class="mm fiber"><div class="mmv">${m.fiber}g</div><div class="mml">fiber</div></div> </div> </div> `).join('');
+el.innerHTML=[...S.meals].reverse().map(m=>{const p=mealPcts(m);return` <div class="mcard"> <div class="mcard-top"> <span class="mbadge ${m.type}">${m.type}</span>${mealFlag(m)} <div class="mcard-body"> <div class="mcard-desc">${esc(m.desc)}</div> ${m.notes?`<div class="mcard-note">${esc(m.notes)}</div>`:''} <div class="mcard-time">${m.time||''}</div> </div> <div class="mcard-acts"> <button class="mab" onclick="openEditModal(${m.id})" title="Edit">\u270f\ufe0f</button> <button class="mab del" onclick="deleteMeal(${m.id})" title="Delete">\u2715</button> </div> </div> <div class="mcard-macros" onclick="this.nextElementSibling.classList.toggle('on')"> <div class="mm cal"><div class="mmv">${m.cal}</div><div class="mml">kcal</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.cp)}%"></div></div></div> <div class="mm prot"><div class="mmv">${m.prot}g</div><div class="mml">prot</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.pp)}%"></div></div></div> <div class="mm carb"><div class="mmv">${(m.carb||0)}g</div><div class="mml">carb</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.carbp)}%"></div></div></div> <div class="mm fat"><div class="mmv">${m.fat}g</div><div class="mml">fat</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.fp)}%"></div></div></div> <div class="mm fiber"><div class="mmv">${m.fiber}g</div><div class="mml">fiber</div><div class="mm-bar"><div class="mm-fill" style="width:${Math.min(100,p.fip)}%"></div></div></div> </div> <div class="mcard-pcts"> <span class="mpct cal${p.worst==='cal'?' warn':''}"><span class="mpv">${p.cp}%</span> cal</span> <span class="mpct prot${p.worst==='prot'?' warn':''}"><span class="mpv">${p.pp}%</span> prot</span> <span class="mpct carb${p.worst==='carb'?' warn':''}"><span class="mpv">${p.carbp}%</span> carb</span> <span class="mpct fat${p.worst==='fat'?' warn':''}"><span class="mpv">${p.fp}%</span> fat</span> <span class="mpct fiber${p.worst==='fiber'?' warn':''}"><span class="mpv">${p.fip}%</span> fiber</span> </div> </div>`;}).join('');
 }
 
 function renderWeek(){
