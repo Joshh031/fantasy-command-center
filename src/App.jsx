@@ -11,6 +11,7 @@ import FreeAgentTab from "./tabs/FreeAgentTab.jsx";
 import TradeTab from "./tabs/TradeTab.jsx";
 import IntelTab from "./tabs/IntelTab.jsx";
 import SettingsTab from "./tabs/SettingsTab.jsx";
+import MomentumTab from "./tabs/MomentumTab.jsx";
 
 export const AppContext = createContext(null);
 
@@ -188,6 +189,7 @@ export default function App() {
     { id: "roster", label: "Roster", icon: <Icons.Users /> },
     { id: "freeagent", label: "FA Analyzer", icon: <Icons.TrendUp /> },
     { id: "trade", label: "Trade Eval", icon: <Icons.Swap /> },
+    { id: "momentum", label: "Momentum", icon: <Icons.Activity /> },
     { id: "intel", label: "Intel Feed", icon: <Icons.Search /> },
     { id: "settings", label: "Settings", icon: <Icons.Settings /> },
   ];
@@ -231,6 +233,7 @@ export default function App() {
           {activeTab === "roster" && <RosterTab />}
           {activeTab === "freeagent" && <FreeAgentTab />}
           {activeTab === "trade" && <TradeTab />}
+          {activeTab === "momentum" && <MomentumTab />}
           {activeTab === "intel" && <IntelTab />}
           {activeTab === "settings" && <SettingsTab />}
         </div>
