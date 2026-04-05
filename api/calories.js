@@ -33,7 +33,9 @@ Use typical kid-sized portions. Be reasonable and accurate. Round calories to ne
       ],
     });
 
-    const text = msg.content[0].text.trim();
+    let text = msg.content[0].text.trim();
+    // Strip markdown code fences if present
+    text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
     const data = JSON.parse(text);
     return res.status(200).json(data);
   } catch (err) {
