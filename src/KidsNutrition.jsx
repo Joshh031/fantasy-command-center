@@ -4,7 +4,7 @@ import "./kids-nutrition.css";
 
 const KIDS = [
   { id: "maddie", name: "Maddie", emoji: "\u{1F338}", color: "#e879a8" },
-  { id: "max", name: "Max", emoji: "\u26A1", color: "#60a5fa" },
+  { id: "max", name: "Max", emoji: "\u{1F414}", color: "#60a5fa" },
 ];
 
 const CALORIE_TARGET = 1200;
