@@ -1,7 +1,6 @@
-const Anthropic = require("@anthropic-ai/sdk");
+import Anthropic from "@anthropic-ai/sdk";
 
-module.exports = async function handler(req, res) {
-  // CORS headers
+export default async function handler(req, res) {
   res.setHeader("Content-Type", "application/json");
 
   if (req.method !== "POST") {
@@ -18,9 +17,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const client = new Anthropic.default
-      ? new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY })
-      : new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const msg = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
@@ -39,7 +36,6 @@ Use typical kid-sized portions. Be reasonable and accurate. Round calories to ne
     });
 
     let text = msg.content[0].text.trim();
-    // Strip markdown code fences if present
     text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "");
     const data = JSON.parse(text);
     return res.status(200).json(data);
@@ -47,4 +43,4 @@ Use typical kid-sized portions. Be reasonable and accurate. Round calories to ne
     console.error("Calorie estimation error:", err.message || err);
     return res.status(500).json({ error: err.message || "Failed to estimate calories" });
   }
-};
+}
