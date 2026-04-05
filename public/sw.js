@@ -1,4 +1,4 @@
-const CACHE_NAME = "fcc-v2";
+const CACHE_NAME = "fcc-v3";
 const STATIC_ASSETS = ["/", "/index.html"];
 
 // Install: pre-cache static assets
