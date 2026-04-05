@@ -17,6 +17,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 const DB_PATH = "fantasy-command-center";
+const NUTRITION_PATH = "kids-nutrition";
 
 let _ready = false;
 let _readyCallbacks = [];
@@ -47,6 +48,25 @@ export function fbSet(data) {
 export function fbListen(callback) {
   const start = () => {
     onValue(ref(db, DB_PATH), (snap) => {
+      const val = snap.val();
+      if (val) callback(val);
+    });
+  };
+  onReady(start);
+}
+
+// Nutrition tracker - separate Firebase path
+export function fbSetNutrition(data) {
+  onReady(() => {
+    set(ref(db, NUTRITION_PATH), data).catch((err) =>
+      console.warn("Firebase nutrition write error:", err)
+    );
+  });
+}
+
+export function fbListenNutrition(callback) {
+  const start = () => {
+    onValue(ref(db, NUTRITION_PATH), (snap) => {
       const val = snap.val();
       if (val) callback(val);
     });

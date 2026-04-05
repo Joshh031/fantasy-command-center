@@ -11,6 +11,7 @@ import FreeAgentTab from "./tabs/FreeAgentTab.jsx";
 import TradeTab from "./tabs/TradeTab.jsx";
 import IntelTab from "./tabs/IntelTab.jsx";
 import SettingsTab from "./tabs/SettingsTab.jsx";
+import KidsNutrition from "./KidsNutrition.jsx";
 
 export const AppContext = createContext(null);
 
@@ -42,8 +43,8 @@ function PinGate({ onSuccess }) {
   return (
     <div className="pin-overlay">
       <div className="pin-box">
-        <div className="pin-logo">FCC</div>
-        <div className="pin-title">Fantasy Command Center</div>
+        <div className="pin-logo">🍎</div>
+        <div className="pin-title">Kids Fuel</div>
         <div className="pin-sub">Enter PIN to continue</div>
         <div className="pin-dots">
           {[0, 1, 2, 3].map((i) => (
@@ -68,6 +69,7 @@ function PinGate({ onSuccess }) {
 
 export default function App() {
   const [authed, setAuthed] = useState(() => sessionStorage.getItem("fcc_auth") === PIN);
+  const [activeApp, setActiveApp] = useState(() => localStorage.getItem("fcc-active-app") || "nutrition");
   const [activeTab, setActiveTab] = useState("myteam");
   const [syncStatus, setSyncStatus] = useState("…");
   const [toast, setToast] = useState(null);
@@ -179,7 +181,16 @@ export default function App() {
     },
   }), [keepers, keeperWatchlist, roster, draftPool, draftPick, draftLog, watchlist, notes, news, draftFlags, draftAdjustments, intelCache, tradeMyPlayers, tradeTheirPlayers, showToast]);
 
+  const switchApp = (app) => {
+    setActiveApp(app);
+    localStorage.setItem("fcc-active-app", app);
+  };
+
   if (!authed) return <PinGate onSuccess={() => setAuthed(true)} />;
+
+  if (activeApp === "nutrition") {
+    return <KidsNutrition onBack={() => switchApp("fcc")} />;
+  }
 
   const tabs = [
     { id: "myteam", label: "My Team", icon: <Icons.Star /> },
@@ -214,6 +225,9 @@ export default function App() {
             ))}
           </div>
           <div className="topbar-right">
+            <button className="topbar-nutrition-btn" onClick={() => switchApp("nutrition")} title="Back to Kids Fuel">
+              🍎 Kids Fuel
+            </button>
             <span className={`sync-badge ${syncStatus === "ok" ? "ok" : syncStatus === "err" ? "err" : ""}`}>
               {syncStatus === "ok" ? "✓ Synced" : syncStatus === "err" ? "✗ Offline" : "…"}
             </span>
