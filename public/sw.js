@@ -1,4 +1,4 @@
-const CACHE_NAME = "fcc-v3";
+const CACHE_NAME = "kids-fuel-v1";
 const STATIC_ASSETS = ["/", "/index.html"];
 
 // Install: pre-cache static assets

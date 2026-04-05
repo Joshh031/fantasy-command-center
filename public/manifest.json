@@ -1,11 +1,11 @@
 {
-  "name": "Fantasy Command Center",
-  "short_name": "FCC",
-  "description": "IAMFBL Fantasy Baseball Draft & Season Management",
+  "name": "Kids Fuel",
+  "short_name": "Kids Fuel",
+  "description": "Nutrition tracker for Maddie & Max",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0f",
-  "theme_color": "#3b82f6",
+  "theme_color": "#22c55e",
   "icons": [
     {
       "src": "/icon-192.png",

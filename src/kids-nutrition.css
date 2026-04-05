@@ -23,20 +23,6 @@
   z-index: 100;
 }
 
-.kn-back {
-  background: none;
-  border: 1px solid #334155;
-  color: #94a3b8;
-  font-size: 13px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.kn-back:active {
-  background: #1e293b;
-}
-
 .kn-title {
   display: flex;
   align-items: center;
@@ -50,6 +36,12 @@
   font-size: 22px;
 }
 
+.kn-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .kn-sync {
   font-size: 12px;
   color: #64748b;
@@ -60,6 +52,20 @@
 
 .kn-sync.ok {
   color: #22c55e;
+}
+
+.kn-fcc-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.kn-fcc-btn:active {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 /* Kid Tabs */

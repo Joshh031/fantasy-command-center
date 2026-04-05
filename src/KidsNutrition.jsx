@@ -169,14 +169,16 @@ export default function KidsNutrition({ onBack }) {
     <div className="kn-app">
       {/* Header */}
       <div className="kn-header">
-        <button className="kn-back" onClick={onBack}>← FCC</button>
         <div className="kn-title">
           <span className="kn-logo">🍎</span>
           <span>Kids Fuel</span>
         </div>
-        <span className={`kn-sync ${syncStatus === "ok" ? "ok" : ""}`}>
-          {syncStatus === "ok" ? "✓" : "…"}
-        </span>
+        <div className="kn-header-right">
+          <span className={`kn-sync ${syncStatus === "ok" ? "ok" : ""}`}>
+            {syncStatus === "ok" ? "✓ Synced" : "…"}
+          </span>
+          <button className="kn-fcc-btn" onClick={onBack} title="Fantasy Command Center">⚾</button>
+        </div>
       </div>
 
       {/* Kid Tabs */}
