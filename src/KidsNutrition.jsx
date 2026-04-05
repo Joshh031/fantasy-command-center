@@ -150,13 +150,16 @@ export default function KidsNutrition() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ food: customName.trim() }),
       });
-      if (!res.ok) throw new Error("lookup failed");
       const result = await res.json();
-      setLookupResult(result);
-      setCustomCal(String(result.cal));
-      setCustomProtein(String(result.protein));
-    } catch {
-      setLookupResult({ error: true });
+      if (!res.ok || result.error) {
+        setLookupResult({ error: true, msg: result.error || "Lookup failed" });
+      } else {
+        setLookupResult(result);
+        setCustomCal(String(result.cal));
+        setCustomProtein(String(result.protein));
+      }
+    } catch (err) {
+      setLookupResult({ error: true, msg: err.message });
     }
     setLookupLoading(false);
   };
@@ -393,7 +396,7 @@ export default function KidsNutrition() {
 
                 {lookupResult?.error && (
                   <div className="kn-lookup-result error">
-                    Couldn't look up \u2014 enter manually below
+                    {lookupResult.msg || "Couldn't look up"} — enter manually below
                   </div>
                 )}
 
