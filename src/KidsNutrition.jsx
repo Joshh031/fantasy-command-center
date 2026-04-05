@@ -150,6 +150,12 @@ export default function KidsNutrition() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ food: customName.trim() }),
       });
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        setLookupResult({ error: true, msg: "Server error — check Vercel logs" });
+        setLookupLoading(false);
+        return;
+      }
       const result = await res.json();
       if (!res.ok || result.error) {
         setLookupResult({ error: true, msg: result.error || "Lookup failed" });
