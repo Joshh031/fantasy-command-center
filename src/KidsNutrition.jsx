@@ -12,9 +12,13 @@ const PROTEIN_TARGET = 50;
 
 const QUICK_FOODS = [
   { name: "Glass of Milk", cal: 150, protein: 8, icon: "\u{1F95B}" },
-  { name: "PB Sandwich", cal: 350, protein: 12, icon: "\u{1F96A}" },
+  { name: "PB on Potato Bread", cal: 350, protein: 12, icon: "\u{1F96A}" },
+  { name: "PB & Nutella on Potato Bread", cal: 450, protein: 13, icon: "\u{1F36B}" },
   { name: "Tri-Color Pasta", cal: 220, protein: 8, icon: "\u{1F35D}" },
   { name: "Pepperoni Pizza", cal: 300, protein: 13, icon: "\u{1F355}" },
+  { name: "Waffles (2)", cal: 280, protein: 6, icon: "\u{1F9C7}" },
+  { name: "Golden Grahams w/ Milk", cal: 280, protein: 10, icon: "\u{1F35C}" },
+  { name: "Bluey Cereal w/ Milk", cal: 260, protein: 9, icon: "\u{1F35C}" },
   { name: "Strawberries (5)", cal: 20, protein: 1, icon: "\u{1F353}" },
   { name: "Apple", cal: 95, protein: 0, icon: "\u{1F34E}" },
   { name: "Cucumber", cal: 16, protein: 1, icon: "\u{1F952}" },
