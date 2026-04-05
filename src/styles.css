@@ -1,0 +1,116 @@
+/* ── Kids Fuel — Global Styles ─────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #0a0a0f;
+  color: #e2e8f0;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── PIN Gate ──────────────────────────────────────────── */
+
+.pin-overlay {
+  position: fixed;
+  inset: 0;
+  background: #0a0a0f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.pin-box {
+  text-align: center;
+  width: 300px;
+}
+
+.pin-logo {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.pin-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #f1f5f9;
+  letter-spacing: -0.02em;
+}
+
+.pin-sub {
+  font-size: 14px;
+  color: #64748b;
+  margin: 8px 0 24px;
+}
+
+.pin-dots {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.pin-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #334155;
+  background: transparent;
+  transition: all 0.15s;
+}
+
+.pin-dot.filled {
+  background: #22c55e;
+  border-color: #22c55e;
+}
+
+.pin-dot.error {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+
+.pin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  max-width: 240px;
+  margin: 0 auto;
+}
+
+.pin-key {
+  width: 72px;
+  height: 56px;
+  border-radius: 12px;
+  border: 1px solid #1e293b;
+  background: #111118;
+  color: #e2e8f0;
+  font-size: 22px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.pin-key:active {
+  background: #1e293b;
+}
+
+.pin-key.del {
+  font-size: 13px;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+}
+
+.pin-error {
+  height: 20px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: #ef4444;
+  font-weight: 600;
+}
